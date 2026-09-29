@@ -1,4 +1,11 @@
-from mars.memory import MemoryFormation, MemoryManager, SQLiteMemoryStore
+from types import SimpleNamespace
+
+from mars.memory import (
+    GeminiMemoryExtractor,
+    MemoryFormation,
+    MemoryManager,
+    SQLiteMemoryStore,
+)
 
 
 def test_memory_persists_and_can_be_recalled() -> None:
@@ -65,3 +72,27 @@ def test_explicit_memory_is_saved() -> None:
     assert saved is not None
     assert saved.content == "MARS should use Trade-Oracle for trading."
     assert saved.category == "explicit"
+
+
+def test_gemini_extractor_accepts_structured_decision() -> None:
+    response = SimpleNamespace(
+        parsed=SimpleNamespace(
+            should_remember=True,
+            content="User wants MARS to use Trade-Oracle for trading.",
+            category="project",
+        )
+    )
+
+    class FakeModels:
+        def generate_content(self, **_kwargs):
+            return response
+
+    class FakeClient:
+        models = FakeModels()
+
+    extractor = GeminiMemoryExtractor(client=FakeClient())
+    candidate = extractor.extract("Trade-Oracle should be MARS's trading specialist.")
+
+    assert candidate is not None
+    assert candidate.content == "User wants MARS to use Trade-Oracle for trading."
+    assert candidate.category == "project"
