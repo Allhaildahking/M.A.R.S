@@ -3,6 +3,19 @@
 ## Core
 Own orchestration and stable interfaces. The core must not depend on one model vendor.
 
+## Agent loop
+MARS now supports a bounded model-driven tool loop:
+
+1. Build system, history, memory, and tool catalog.
+2. Ask the provider for a structured model turn.
+3. If there are no tool calls, return the model's answer.
+4. If tool calls are requested, execute each through the ToolRegistry.
+5. Feed normalized tool results back into the conversation.
+6. Ask the model to reason again.
+7. Stop after a configurable maximum number of tool rounds.
+
+The registry remains the enforcement point. Model output can request an action, but it cannot grant itself permission.
+
 ## Memory
 Implemented:
 - long-term user and project memory
