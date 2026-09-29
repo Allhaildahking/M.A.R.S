@@ -8,6 +8,7 @@ version = "0.1.0"
 description = "Multifunctional Autonomous Reasoning System"
 readme = "README.md"
 requires-python = ">=3.12"
+authors = [{ name = "Destiny Growrich" }]
 dependencies = [
   "google-genai>=1.38.0",
   "pydantic>=2.10",
