@@ -1,7 +1,6 @@
-from types import SimpleNamespace
-
 from mars.memory import (
     GeminiMemoryExtractor,
+    MemoryDecision,
     MemoryFormation,
     MemoryManager,
     SQLiteMemoryStore,
@@ -75,17 +74,15 @@ def test_explicit_memory_is_saved() -> None:
 
 
 def test_gemini_extractor_accepts_structured_decision() -> None:
-    response = SimpleNamespace(
-        parsed=SimpleNamespace(
-            should_remember=True,
-            content="User wants MARS to use Trade-Oracle for trading.",
-            category="project",
-        )
+    decision = MemoryDecision(
+        should_remember=True,
+        content="User wants MARS to use Trade-Oracle for trading.",
+        category="project",
     )
 
     class FakeModels:
         def generate_content(self, **_kwargs):
-            return response
+            return type("Response", (), {"parsed": decision})()
 
     class FakeClient:
         models = FakeModels()
