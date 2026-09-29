@@ -25,11 +25,16 @@ class Mars:
         self,
         provider: ModelProvider,
         memory: MemoryManager | None = None,
+        auto_remember: bool = False,
     ) -> None:
         self.provider = provider
         self.memory = memory
+        self.auto_remember = auto_remember
 
     def respond(self, message: str, history: list[Message] | None = None) -> str:
+        if self.memory is not None and self.auto_remember:
+            self.memory.remember_if_worthwhile(message)
+
         messages = [
             Message(role="system", content=MARS_SYSTEM_INSTRUCTIONS),
             *(history or []),
@@ -38,14 +43,16 @@ class Mars:
         if self.memory is not None:
             memories = self.memory.recall(message)
             if memories:
-                memory_context = "\n".join(
+                memory_context = "
+".join(
                     f"- [{memory.category}] {memory.content}" for memory in memories
                 )
                 messages.append(
                     Message(
                         role="system",
                         content=(
-                            "Relevant persistent memory about the user/project:\n"
+                            "Relevant persistent memory about the user/project:
+"
                             f"{memory_context}"
                         ),
                     )
