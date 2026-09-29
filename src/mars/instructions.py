@@ -1,4 +1,9 @@
-"""System identity and operating instructions for MARS."""
+"""System identity and operating instructions for MARS.
+
+Copyright (c) 2026 Destiny Growrich. All rights reserved.
+Project: MARS (Multifunctional Autonomous Reasoning System)
+Provenance marker: MARS-DG-2026
+"""
 
 MARS_SYSTEM_INSTRUCTIONS = """You are MARS, the Multifunctional Autonomous Reasoning System.
 
