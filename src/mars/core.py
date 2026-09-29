@@ -10,6 +10,7 @@ from typing import Protocol
 
 from .instructions import MARS_SYSTEM_INSTRUCTIONS
 from .memory import MemoryManager
+from .tools import ToolPermission, ToolRegistry, ToolResult
 
 
 @dataclass(frozen=True)
@@ -31,10 +32,12 @@ class Mars:
         provider: ModelProvider,
         memory: MemoryManager | None = None,
         auto_remember: bool = False,
+        tools: ToolRegistry | None = None,
     ) -> None:
         self.provider = provider
         self.memory = memory
         self.auto_remember = auto_remember
+        self.tools = tools or ToolRegistry()
 
     def respond(self, message: str, history: list[Message] | None = None) -> str:
         if self.memory is not None and self.auto_remember:
@@ -63,3 +66,17 @@ class Mars:
 
         messages.append(Message(role="user", content=message))
         return self.provider.generate(messages)
+
+    def execute_tool(
+        self,
+        name: str,
+        arguments: dict[str, object],
+        *,
+        allowed_permissions: set[ToolPermission] | None = None,
+    ) -> ToolResult:
+        """Execute a registered tool through the permission boundary."""
+        return self.tools.execute(
+            name,
+            arguments,
+            allowed_permissions=allowed_permissions,
+        )
