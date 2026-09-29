@@ -43,16 +43,14 @@ class Mars:
         if self.memory is not None:
             memories = self.memory.recall(message)
             if memories:
-                memory_context = "
-".join(
+                memory_context = "\n".join(
                     f"- [{memory.category}] {memory.content}" for memory in memories
                 )
                 messages.append(
                     Message(
                         role="system",
                         content=(
-                            "Relevant persistent memory about the user/project:
-"
+                            "Relevant persistent memory about the user/project:\n"
                             f"{memory_context}"
                         ),
                     )
