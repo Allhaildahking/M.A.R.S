@@ -1,4 +1,9 @@
-"""Memory orchestration for MARS."""
+"""Memory orchestration for MARS.
+
+Copyright (c) 2026 Destiny Growrich. All rights reserved.
+Project: MARS (Multifunctional Autonomous Reasoning System)
+Provenance marker: MARS-DG-2026
+"""
 
 from .formation import MemoryCandidate, MemoryExtractor, MemoryFormation
 from .models import Memory
