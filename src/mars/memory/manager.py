@@ -1,6 +1,6 @@
 """Memory orchestration for MARS."""
 
-from .formation import MemoryCandidate, MemoryFormation
+from .formation import MemoryCandidate, MemoryExtractor, MemoryFormation
 from .models import Memory
 from .store import SQLiteMemoryStore
 
@@ -11,7 +11,7 @@ class MemoryManager:
     def __init__(
         self,
         store: SQLiteMemoryStore,
-        formation: MemoryFormation | None = None,
+        formation: MemoryExtractor | None = None,
     ) -> None:
         self.store = store
         self.formation = formation or MemoryFormation()
@@ -29,6 +29,12 @@ class MemoryManager:
         return self.formation.extract(message)
 
     def remember_if_explicit(self, message: str) -> Memory | None:
+        candidate = self.extract(message)
+        if candidate is None:
+            return None
+        return self.remember(candidate.content, candidate.category)
+
+    def remember_if_worthwhile(self, message: str) -> Memory | None:
         candidate = self.extract(message)
         if candidate is None:
             return None
