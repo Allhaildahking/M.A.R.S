@@ -49,6 +49,23 @@ class SQLiteMemoryStore:
             raise ValueError("Memory content cannot be empty.")
 
         connection = self._connect()
+        existing = connection.execute(
+            """
+            SELECT id, content, category
+            FROM memories
+            WHERE LOWER(TRIM(content)) = LOWER(?)
+            ORDER BY id DESC
+            LIMIT 1
+            """,
+            (content,),
+        ).fetchone()
+        if existing is not None:
+            return Memory(
+                id=existing["id"],
+                content=existing["content"],
+                category=existing["category"],
+            )
+
         cursor = connection.execute(
             "INSERT INTO memories (content, category) VALUES (?, ?)",
             (content, category),
@@ -103,6 +120,19 @@ class SQLiteMemoryStore:
             Memory(id=row["id"], content=row["content"], category=row["category"])
             for row in rows
         ]
+
+    def delete(self, memory_id: int) -> bool:
+        connection = self._connect()
+        cursor = connection.execute("DELETE FROM memories WHERE id = ?", (memory_id,))
+        connection.commit()
+        return cursor.rowcount > 0
+
+    def delete_matching(self, query: str) -> list[Memory]:
+        matches = self.search(query, limit=100)
+        for memory in matches:
+            if memory.id is not None:
+                self.delete(memory.id)
+        return matches
 
     def close(self) -> None:
         """Close the dedicated in-memory connection, if one exists."""
