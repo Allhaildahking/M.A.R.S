@@ -46,4 +46,11 @@ class ToolRegistry:
                 success=False,
                 error=f"Permission denied for tool '{name}': {required.value}",
             )
-        return tool.execute(arguments)
+
+        try:
+            return tool.execute(arguments)
+        except Exception as error:
+            return ToolResult(
+                success=False,
+                error=f"Tool '{name}' failed: {error}",
+            )
