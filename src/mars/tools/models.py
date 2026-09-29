@@ -29,6 +29,22 @@ class ToolSpec:
 
 
 @dataclass(frozen=True)
+class ToolCall:
+    """A structured request from the model to execute a tool."""
+
+    name: str
+    arguments: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class ModelTurn:
+    """Structured model output used by the agent loop."""
+
+    text: str = ""
+    tool_calls: tuple[ToolCall, ...] = ()
+
+
+@dataclass(frozen=True)
 class ToolResult:
     """Normalized result returned by a tool."""
 
