@@ -19,6 +19,9 @@ class MemoryManager:
     def remember(self, content: str, category: str = "general") -> Memory:
         return self.store.add(content, category)
 
+    def forget(self, query: str) -> list[Memory]:
+        return self.store.delete_matching(query)
+
     def recall(self, query: str, limit: int = 5) -> list[Memory]:
         return self.store.search(query, limit=limit)
 
