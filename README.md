@@ -2,6 +2,10 @@
 
 MARS — Multifunctional Autonomous Reasoning System
 
+> **Project provenance:** Copyright (c) 2026 Destiny Growrich.  
+> **Provenance marker:** `MARS-DG-2026`  
+> **Canonical repository:** github.com/Allhaildahking/M.A.R.S
+
 MARS is a modular personal AI system built to reason, remember, write, code, research, analyze markets, and eventually execute tasks through controlled tools.
 
 Stage: Foundation / v0.1
