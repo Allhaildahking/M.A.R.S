@@ -132,3 +132,35 @@ def test_mars_stops_runaway_tool_loops() -> None:
     )
 
     assert "safety limit" in result
+
+def test_mars_keeps_short_term_conversation_state() -> None:
+    provider = AgentProvider(
+        [
+            ModelTurn(text="MARS remembers the first message."),
+            ModelTurn(text="Yes, the previous message was about Python."),
+        ]
+    )
+    mars = Mars(provider)
+
+    first = mars.respond("We are talking about Python.", conversation_id="session-1")
+    second = mars.respond("What were we talking about?", conversation_id="session-1")
+
+    assert first == "MARS remembers the first message."
+    assert second == "Yes, the previous message was about Python."
+    assert provider.seen_messages[1][1].content == "We are talking about Python."
+
+
+def test_mars_keeps_conversations_isolated() -> None:
+    provider = AgentProvider(
+        [
+            ModelTurn(text="session one"),
+            ModelTurn(text="session two"),
+        ]
+    )
+    mars = Mars(provider)
+
+    mars.respond("first", conversation_id="one")
+    mars.respond("second", conversation_id="two")
+
+    assert len(provider.seen_messages[1]) == 2
+    assert provider.seen_messages[1][1].content == "second"
