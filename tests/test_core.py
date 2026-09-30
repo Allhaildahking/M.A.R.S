@@ -118,7 +118,10 @@ def test_mars_returns_permission_denial_to_the_model() -> None:
 
 def test_mars_stops_runaway_tool_loops() -> None:
     provider = AgentProvider(
-        [ModelTurn(tool_calls=(ToolCall(name="echo", arguments={"text": "loop"}),))]
+        [
+            ModelTurn(tool_calls=(ToolCall(name="echo", arguments={"text": "loop"}),)),
+            ModelTurn(tool_calls=(ToolCall(name="echo", arguments={"text": "loop"}),)),
+        ]
     )
     mars = Mars(provider, max_tool_rounds=2)
     mars.tools.register(EchoTool())
