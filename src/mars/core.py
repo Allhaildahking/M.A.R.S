@@ -8,6 +8,7 @@ Provenance marker: MARS-DG-2026
 from dataclasses import dataclass
 from typing import Protocol
 
+from .conversation import ConversationStore
 from .instructions import MARS_SYSTEM_INSTRUCTIONS
 from .memory import MemoryManager
 from .tools import ModelTurn, ToolCall, ToolPermission, ToolRegistry, ToolResult
@@ -40,6 +41,7 @@ class Mars:
         memory: MemoryManager | None = None,
         auto_remember: bool = False,
         tools: ToolRegistry | None = None,
+        conversation_store: ConversationStore | None = None,
         max_tool_rounds: int = 5,
     ) -> None:
         if max_tool_rounds < 1:
@@ -48,6 +50,7 @@ class Mars:
         self.memory = memory
         self.auto_remember = auto_remember
         self.tools = tools or ToolRegistry()
+        self.conversations = conversation_store or ConversationStore()
         self.max_tool_rounds = max_tool_rounds
 
     def _build_messages(
@@ -84,16 +87,27 @@ class Mars:
         message: str,
         history: list[Message] | None = None,
         *,
+        conversation_id: str | None = None,
         allowed_permissions: set[ToolPermission] | None = None,
     ) -> str:
         if self.memory is not None and self.auto_remember:
             self.memory.remember_if_worthwhile(message)
 
-        messages = self._build_messages(message, history)
+        session_history = history
+        conversation = None
+        if conversation_id is not None:
+            conversation = self.conversations.get_or_create(conversation_id)
+            session_history = conversation.history()
+
+        messages = self._build_messages(message, session_history)
         generate_turn = getattr(self.provider, "generate_turn", None)
 
         if generate_turn is None:
-            return self.provider.generate(messages)
+            response = self.provider.generate(messages)
+            if conversation is not None:
+                conversation.add(Message(role="user", content=message))
+                conversation.add(Message(role="assistant", content=response))
+            return response
 
         tool_specs = [
             {
@@ -108,6 +122,9 @@ class Mars:
         for _ in range(self.max_tool_rounds):
             turn: ModelTurn = generate_turn(messages, tool_specs)
             if not turn.tool_calls:
+                if conversation is not None:
+                    conversation.add(Message(role="user", content=message))
+                    conversation.add(Message(role="assistant", content=turn.text))
                 return turn.text
 
             messages.append(
@@ -129,6 +146,18 @@ class Mars:
                         content=self._format_tool_result(call, result),
                     )
                 )
+
+        if conversation is not None:
+            conversation.add(Message(role="user", content=message))
+            conversation.add(
+                Message(
+                    role="assistant",
+                    content=(
+                        "MARS stopped the tool loop after reaching its safety limit. "
+                        "The requested task may require another step."
+                    ),
+                )
+            )
 
         return (
             "MARS stopped the tool loop after reaching its safety limit. "
