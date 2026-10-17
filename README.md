@@ -27,6 +27,7 @@ Core principles:
 - Public web-page retrieval with readable text extraction and content limits
 - Network safety checks that reject private/local hosts and unsafe redirects
 - End-to-end automated tests for search, page retrieval, and source-cited responses
+- Validated task-plan drafting with dependency and cycle checks; plan creation never executes steps
 
 ## Planned capabilities
 
@@ -34,6 +35,7 @@ Core principles:
 - Software development tools
 - Market analysis
 - Controlled trading execution
+- Task execution with explicit approvals and independent permission checks
 - Task planning and automation
 - Telegram/web interfaces
 - Scheduled workflows
@@ -77,6 +79,36 @@ python scripts/smoke_test_research.py "Find a recent official NASA Artemis updat
 ```
 
 The script never prints the API key. It returns a non-zero exit code if the key is missing, the live request fails, the answer is empty, or the answer contains no source URLs. A passing run verifies a live answer with source links, but does not guarantee that every fact is correct.
+
+### Draft a validated task plan
+
+The planning tool checks task steps, dependency references, and dependency cycles. It only returns a pending plan. It does not run steps or modify external systems.
+
+```python
+from mars.tools import CreateTaskPlanTool
+
+result = CreateTaskPlanTool().execute(
+    {
+        "goal": "Prepare a portfolio launch",
+        "steps": [
+            {
+                "id": "draft",
+                "title": "Draft the launch post",
+                "description": "Write the post and include the portfolio URL.",
+            },
+            {
+                "id": "review",
+                "title": "Review the post",
+                "description": "Check wording and links before publishing.",
+                "depends_on": ["draft"],
+                "requires_approval": True,
+            },
+        ],
+    }
+)
+if result.success:
+    print(result.output)
+```
 
 ### Use web research in your own code
 
