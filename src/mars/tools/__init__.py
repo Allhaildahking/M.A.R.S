@@ -1,4 +1,4 @@
-"""Tool contracts and registry for MARS.
+"""Tool contracts, registry, and research capabilities for MARS.
 
 Copyright (c) 2026 Destiny Growrich. All rights reserved.
 Project: MARS (Multifunctional Autonomous Reasoning System)
@@ -7,6 +7,7 @@ Provenance marker: MARS-DG-2026
 
 from .models import ModelTurn, Tool, ToolCall, ToolPermission, ToolResult, ToolSpec
 from .registry import ToolRegistry
+from .research import WebFetchTool, WebSearchTool, fetch_public_page, register_web_research_tools
 
 __all__ = [
     "ModelTurn",
@@ -16,4 +17,8 @@ __all__ = [
     "ToolResult",
     "ToolSpec",
     "ToolRegistry",
+    "WebFetchTool",
+    "WebSearchTool",
+    "fetch_public_page",
+    "register_web_research_tools",
 ]
