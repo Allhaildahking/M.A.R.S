@@ -22,14 +22,13 @@ Implemented:
 - searchable memories
 - explicit save and forget operations
 - duplicate-safe storage
-
-Implemented:
 - short-term in-memory conversation sessions
 - session-aware responses and session isolation
 
 Planned:
 - timestamps and provenance
 - richer retrieval and memory lifecycle controls
+- durable conversation history across restarts
 
 ## Tools
 MARS tools are isolated behind a registry.
@@ -48,7 +47,13 @@ Initial permission levels:
 - write
 - external_action
 
-Actual web, filesystem, code-execution, GitHub, calculator, and external-API tools will be added behind this boundary rather than embedded in the reasoning core.
+Implemented read-only research tools:
+- `web_search`: searches public web indexes and returns titles, snippets, and source URLs
+- `web_fetch`: retrieves public HTTP(S) pages and extracts readable text
+- page size and extracted text are capped; local/private network targets and unsafe redirects are rejected
+- web content is untrusted input and must not override system instructions
+
+The web search provider is the `ddgs` metasearch package. Search quality and availability depend on its upstream engines. A search result is evidence to inspect, not proof that a claim is true.
 
 ## Capabilities
 Initial boundaries:
