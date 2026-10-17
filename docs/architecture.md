@@ -23,8 +23,11 @@ Implemented:
 - explicit save and forget operations
 - duplicate-safe storage
 
+Implemented:
+- short-term in-memory conversation sessions
+- session-aware responses and session isolation
+
 Planned:
-- short-term conversation state
 - timestamps and provenance
 - richer retrieval and memory lifecycle controls
 
