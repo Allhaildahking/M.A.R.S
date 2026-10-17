@@ -6,6 +6,13 @@ Provenance marker: MARS-DG-2026
 """
 
 from .models import ModelTurn, Tool, ToolCall, ToolPermission, ToolResult, ToolSpec
+from .planning import (
+    CreateTaskPlanTool,
+    PlanStep,
+    TaskPlan,
+    register_planning_tools,
+    validate_task_plan,
+)
 from .registry import ToolRegistry
 from .research import WebFetchTool, WebSearchTool, fetch_public_page, register_web_research_tools
 
@@ -17,6 +24,11 @@ __all__ = [
     "ToolResult",
     "ToolSpec",
     "ToolRegistry",
+    "CreateTaskPlanTool",
+    "PlanStep",
+    "TaskPlan",
+    "register_planning_tools",
+    "validate_task_plan",
     "WebFetchTool",
     "WebSearchTool",
     "fetch_public_page",
