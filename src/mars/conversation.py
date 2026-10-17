@@ -1,6 +1,5 @@
 """Short-term conversation state for MARS.
 
-
 Copyright (c) 2026 Destiny Growrich. All rights reserved.
 Project: MARS (Multifunctional Autonomous Reasoning System)
 Provenance marker: MARS-DG-2026
@@ -36,11 +35,12 @@ class ConversationStore:
         self._conversations: dict[str, Conversation] = {}
 
     def get_or_create(self, conversation_id: str) -> Conversation:
-        if not conversation_id.strip():
+        normalized_id = conversation_id.strip()
+        if not normalized_id:
             raise ValueError("conversation_id cannot be empty.")
         return self._conversations.setdefault(
-            conversation_id,
-            Conversation(id=conversation_id),
+            normalized_id,
+            Conversation(id=normalized_id),
         )
 
     def get(self, conversation_id: str) -> Conversation:
