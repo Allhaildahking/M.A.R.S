@@ -54,7 +54,7 @@ Example: register web research tools in a MARS instance.
 ```python
 from mars.core import Mars
 from mars.providers import GeminiProvider
-from mars.tools import ToolRegistry, register_web_research_tools
+from mars.tools import ToolPermission, ToolRegistry, register_web_research_tools
 
 tools = ToolRegistry()
 register_web_research_tools(tools)
@@ -62,7 +62,7 @@ register_web_research_tools(tools)
 mars = Mars(provider=GeminiProvider(), tools=tools)
 answer = mars.respond(
     "Research recent developments in battery recycling and compare reliable sources.",
-    allowed_permissions={__import__("mars.tools", fromlist=["ToolPermission"]).ToolPermission.READ},
+    allowed_permissions={ToolPermission.READ},
 )
 print(answer)
 ```
