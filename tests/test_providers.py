@@ -70,4 +70,5 @@ def test_gemini_structured_turn_keeps_system_instruction_out_of_chat() -> None:
     assert turn.tool_calls == (
         ToolCall(name="web_search", arguments={"query": "MARS project"}),
     )
-    assert call["config"].response_schema is AgentResponse
+    assert call["config"].response_mime_type == "application/json"
+    assert not hasattr(call["config"], "response_schema") or call["config"].response_schema is None
