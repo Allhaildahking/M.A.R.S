@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 
 from mars.core import Message
-from mars.providers import AgentResponse, GeminiProvider
+from mars.providers import GeminiProvider
 from mars.tools import ToolCall
 
 
