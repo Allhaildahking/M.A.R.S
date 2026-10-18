@@ -15,7 +15,30 @@ import sys
 from mars.config import settings
 from mars.core import Mars
 from mars.providers import GeminiProvider
-from mars.tools import ToolPermission, ToolRegistry, register_web_research_tools
+from mars.tools import ToolPermission, ToolRegistry, ToolResult, register_web_research_tools
+
+
+class RecordingMars(Mars):
+    """Capture tool results so the smoke test can verify real research occurred."""
+
+    def __init__(self, **kwargs: object) -> None:
+        super().__init__(**kwargs)
+        self.tool_results: list[tuple[str, ToolResult]] = []
+
+    def execute_tool(
+        self,
+        name: str,
+        arguments: dict[str, object],
+        *,
+        allowed_permissions: set[ToolPermission] | None = None,
+    ) -> ToolResult:
+        result = super().execute_tool(
+            name,
+            arguments,
+            allowed_permissions=allowed_permissions,
+        )
+        self.tool_results.append((name, result))
+        return result
 
 
 def main() -> int:
@@ -32,7 +55,7 @@ def main() -> int:
     )
     registry = ToolRegistry()
     register_web_research_tools(registry)
-    mars = Mars(
+    mars = RecordingMars(
         provider=GeminiProvider(),
         tools=registry,
         max_tool_rounds=5,
@@ -55,11 +78,36 @@ def main() -> int:
     if not answer.strip():
         print("\nFAIL: MARS returned an empty answer.")
         return 1
-    if not urls:
-        print("\nFAIL: Answer contains no source URLs.")
+
+    search_results = [
+        result.output
+        for name, result in mars.tool_results
+        if name == "web_search" and result.success and isinstance(result.output, dict)
+    ]
+    if not search_results:
+        print("\nFAIL: MARS did not successfully execute web_search.")
         return 1
 
-    print(f"\nPASS: Live answer returned with {len(urls)} source URL(s).")
+    source_urls = {
+        str(item.get("url"))
+        for result in search_results
+        for item in result.get("results", [])
+        if isinstance(item, dict) and item.get("url")
+    }
+    if not source_urls:
+        print("\nFAIL: web_search returned no usable source URLs.")
+        return 1
+
+    cited_sources = {url.rstrip(".,;") for url in urls} & source_urls
+    if not cited_sources:
+        print("\nFAIL: Answer URLs do not match any URLs returned by web_search.")
+        print(f"Search returned {len(source_urls)} source URL(s).")
+        return 1
+
+    print(
+        f"\nPASS: Live answer used web_search and cited "
+        f"{len(cited_sources)} URL(s) returned by the tool."
+    )
     return 0
 
 
