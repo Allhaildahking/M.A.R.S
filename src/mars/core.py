@@ -5,6 +5,7 @@ Project: MARS (Multifunctional Autonomous Reasoning System)
 Provenance marker: MARS-DG-2026
 """
 
+import json
 from dataclasses import dataclass
 from typing import Protocol
 
@@ -170,7 +171,10 @@ class Mars:
             {"name": call.name, "arguments": call.arguments}
             for call in tool_calls
         ]
-        return f"Tool calls requested: {calls}"
+        return json.dumps(
+            {"text": "", "tool_calls": calls},
+            ensure_ascii=False,
+        )
 
     @staticmethod
     def _format_tool_result(call: ToolCall, result: ToolResult) -> str:
