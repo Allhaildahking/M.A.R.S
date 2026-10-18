@@ -1,3 +1,4 @@
+import json
 from dataclasses import dataclass
 
 from mars.core import Mars, Message
@@ -97,6 +98,9 @@ def test_mars_runs_model_selected_tool_then_reasons_again() -> None:
     )
 
     assert result == "The tool returned hello."
+    assistant_tool_history = provider.seen_messages[1][2]
+    parsed_history = json.loads(assistant_tool_history.content)
+    assert parsed_history["tool_calls"] == [{"name": "echo", "arguments": {"text": "hello"}}]
     assert any("Tool result for echo" in message.content for message in provider.seen_messages[1])
 
 
