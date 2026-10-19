@@ -3,7 +3,8 @@
   "services": {
     "app": {
       "root": ".",
-      "runtime": "python"
+      "entrypoint": "api/index.py",
+      "framework": "fastapi"
     },
     "frontend": {
       "root": "frontend",
