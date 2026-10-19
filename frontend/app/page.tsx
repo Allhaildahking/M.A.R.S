@@ -1,26 +1,26 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 
-type Section = "Home" | "Workspace" | "Projects" | "Research" | "System Lab";
-const sections: { name: Section; mark: string }[] = [
-  { name: "Home", mark: "⌂" }, { name: "Workspace", mark: "▤" }, { name: "Projects", mark: "▦" },
-  { name: "Research", mark: "⌕" }, { name: "System Lab", mark: "⌘" },
-];
-const starters = [
-  { mark: "↗", title: "Research a topic", detail: "Compare sources and surface useful findings." },
-  { mark: "</>", title: "Build something", detail: "Plan a feature, review code, or solve a bug." },
-  { mark: "◷", title: "Think it through", detail: "Turn a rough idea into a clear next step." },
+type Mode = "standard" | "dev";
+type Message = { role: "user" | "assistant"; content: string };
+
+const suggestions = [
+  "Help me understand something",
+  "Research an idea",
+  "Help me build an app",
+  "Think through a decision",
 ];
 
 export default function HomePage() {
-  const [section, setSection] = useState<Section>("Home");
+  const [mode, setMode] = useState<Mode>("standard");
   const [prompt, setPrompt] = useState("");
-  const [messages, setMessages] = useState<{ role: "user" | "assistant"; content: string }[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [sending, setSending] = useState(false);
   const [apiStatus, setApiStatus] = useState<"checking" | "connected" | "disconnected">("checking");
-  const [conversationId] = useState(() => `studio-${Date.now()}`);
-  const [notice, setNotice] = useState("Checking M.A.R.S. API status…");
+  const [conversationId, setConversationId] = useState(() => `mars-${Date.now()}`);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let active = true;
@@ -30,104 +30,131 @@ export default function HomePage() {
         return response.json();
       })
       .then((payload) => {
-        if (!active) return;
-        const connected = payload.status === "ok";
-        setApiStatus(connected ? "connected" : "disconnected");
-        setNotice(connected ? "M.A.R.S. API connected" : "M.A.R.S. API disconnected");
+        if (active) setApiStatus(payload.status === "ok" ? "connected" : "disconnected");
       })
       .catch(() => {
-        if (!active) return;
-        setApiStatus("disconnected");
-        setNotice("M.A.R.S. API disconnected · configure MARS_API_URL and MARS_API_TOKEN");
+        if (active) setApiStatus("disconnected");
       });
     return () => { active = false; };
   }, []);
 
-  async function sendPrompt(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const value = prompt.trim();
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [messages, sending]);
+
+  function newChat() {
+    setMessages([]);
+    setPrompt("");
+    setConversationId(`mars-${Date.now()}`);
+    composerRef.current?.focus();
+  }
+
+  async function sendPrompt(event?: FormEvent<HTMLFormElement>, suggested?: string) {
+    event?.preventDefault();
+    const value = (suggested ?? prompt).trim();
     if (!value || sending) return;
 
     setPrompt("");
-    setSending(true);
     setMessages((current) => [...current, { role: "user", content: value }]);
-    setNotice("Sending request to M.A.R.S. backend…");
-    setSection("Workspace");
+    setSending(true);
 
     try {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: value, conversation_id: conversationId }),
+        body: JSON.stringify({ message: value, conversation_id: conversationId, mode }),
       });
       const payload = await response.json();
       if (!response.ok) {
         throw new Error(typeof payload.error === "string" ? payload.error : "M.A.R.S. could not complete the request.");
       }
-      if (typeof payload.answer !== "string") {
-        throw new Error("The backend returned an unexpected response.");
-      }
+      if (typeof payload.answer !== "string") throw new Error("The backend returned an unexpected response.");
       setMessages((current) => [...current, { role: "assistant", content: payload.answer }]);
-      setNotice("Connected · response received from M.A.R.S.");
+      setApiStatus("connected");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Could not reach M.A.R.S.";
-      setNotice(message);
+      setMessages((current) => [...current, { role: "assistant", content: message }]);
+      setApiStatus("disconnected");
     } finally {
       setSending(false);
     }
   }
 
-  function startWith(title: string) {
-    const prefixes: Record<string, string> = {
-      "Research a topic": "Help me research: ",
-      "Build something": "Help me plan and build: ",
-      "Think it through": "Help me think through this idea: ",
-    };
-    setPrompt(prefixes[title] || "");
-    document.getElementById("mars-composer")?.focus();
-  }
-
   return (
-    <main className="app-shell">
+    <main className="mars-app">
       <aside className="sidebar">
-        <button className="brand" onClick={() => setSection("Home")} aria-label="M.A.R.S. home">
-          <span className="brand-mark"><i /></span><span className="brand-copy"><strong>M.A.R.S.</strong><small>PERSONAL SYSTEM</small></span>
+        <button className="brand" onClick={newChat} aria-label="M.A.R.S. new chat">
+          <span className="brand-mark">M</span><span>M.A.R.S.</span>
         </button>
-        <button className="new-session" onClick={() => { setMessages([]); setSection("Home"); setNotice("New session · conversation history cleared from this page"); }}><b>＋</b> New session <kbd>⌘ K</kbd></button>
-        <p className="nav-label">WORKSPACE</p>
-        <nav className="main-nav" aria-label="Main navigation">
-          {sections.map((item) => <button key={item.name} className={section === item.name ? "nav-item active" : "nav-item"} onClick={() => setSection(item.name)}><span className="nav-mark">{item.mark}</span><span>{item.name}</span>{item.name === "System Lab" && <i className="nav-dot" />}</button>)}
-        </nav>
+        <button className="new-chat" onClick={newChat}><span>＋</span> New chat</button>
+        <div className="sidebar-label">YOUR SPACE</div>
+        <p className="sidebar-empty">Your recent chats will appear here.</p>
         <div className="sidebar-bottom">
-          <div className="side-status"><i className={`status-led ${apiStatus === "disconnected" ? "offline" : apiStatus === "checking" ? "amber" : ""}`} /><div><strong>M.A.R.S. API</strong><small>{apiStatus === "checking" ? "Checking connection" : apiStatus === "connected" ? "Connected" : "Disconnected"}</small></div><span className="more-mark">···</span></div>
-          <button className="nav-item" onClick={() => setNotice("Settings will be added when preferences and session storage are defined.")}><span className="nav-mark">⚙</span> Settings</button>
-          <div className="profile-row"><div className="avatar">DG</div><div className="profile-copy"><strong>Workspace owner</strong><small>Personal environment</small></div><span className="more-mark">···</span></div>
+          <div className="region-note"><span className="region-dot" /> Nigeria-first, globally aware</div>
+          <div className="connection"><span className={`connection-dot ${apiStatus}`} />{apiStatus === "checking" ? "Connecting…" : apiStatus === "connected" ? "Connected" : "Offline"}</div>
         </div>
       </aside>
 
-      <section className="main-panel">
-        <header className="topbar"><div className="breadcrumb"><span>Studio</span><b>/</b><strong>{section}</strong></div><div className="topbar-right"><span className="environment"><i className="status-led amber" /> LOCAL ENVIRONMENT</span><button className="icon-button" aria-label="Help" onClick={() => setNotice("Choose a workspace section or start with a prompt.")}>?</button></div></header>
-        {section === "Home" ? (
-          <div className="home-content">
-            <div className="eyebrow"><i /> YOUR PRIVATE BUILDER&apos;S STUDIO</div>
-            <div className="hero-title"><h1>Make room<br />for <em>better thinking.</em></h1><p>A workspace for ideas, research, and the things you&apos;re here to build.</p></div>
-            <form className="composer" onSubmit={sendPrompt}>
-              <label className="sr-only" htmlFor="mars-composer">Message M.A.R.S.</label>
-              <textarea id="mars-composer" value={prompt} onChange={(event) => setPrompt(event.target.value)} placeholder="What are we working on?" rows={2} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} />
-              <div className="composer-footer"><span className="composer-hint"><b>✳</b> Be curious. Be specific.</span><div className="composer-actions"><span className="key-hint">↵ to send · shift + ↵ for new line</span><button className="send-button" type="submit" aria-label="Send message" disabled={!prompt.trim() || sending}>{sending ? "…" : "↑"}</button></div></div>
-            </form>
-            <div className="section-heading"><div><span className="section-kicker">START SOMEWHERE</span><h2>What do you need today?</h2></div><span className="heading-index">01 / 03</span></div>
-            <div className="starter-grid">{starters.map((item) => <button className="starter-card" key={item.title} onClick={() => startWith(item.title)}><span className="starter-icon">{item.mark}</span><span className="starter-title">{item.title}<b>↗</b></span><span className="starter-detail">{item.detail}</span></button>)}</div>
-            <div className="lower-grid">
-              <section className="lower-card"><div className="card-topline"><span className="section-kicker">PICK UP WHERE YOU LEFT OFF</span><span className="subtle-index">02</span></div><h3>Recent work</h3><div className="empty-state"><span>↳</span><div><strong>No saved sessions yet</strong><p>Your conversations will show up here once session storage is connected.</p></div></div></section>
-              <section className="lower-card"><div className="card-topline"><span className="section-kicker">SYSTEM STATUS</span><span className="subtle-index">03</span></div><h3>Under the hood</h3><div className="system-row"><span>Interface</span><strong><i className="status-led" /> Running locally</strong></div><div className="system-row"><span>Backend API</span><strong className={apiStatus === "connected" ? "" : "muted-value"}>{apiStatus === "connected" && <i className="status-led" />}{apiStatus === "checking" ? "Checking…" : apiStatus === "connected" ? "Connected" : "Disconnected"}</strong></div><div className="system-row"><span>Tool permissions</span><strong className="muted-value">Not queried</strong></div></section>
-            </div>
+      <section className="chat-area">
+        <header className="topbar">
+          <div className="mobile-brand"><span className="brand-mark">M</span> M.A.R.S.</div>
+          <div className="mode-picker" aria-label="Choose mode">
+            <button className={mode === "standard" ? "mode-option selected" : "mode-option"} onClick={() => setMode("standard")}>Standard</button>
+            <button className={mode === "dev" ? "mode-option selected" : "mode-option"} onClick={() => setMode("dev")}>Dev</button>
           </div>
-        ) : (
-          <div className="section-placeholder"><div className="placeholder-mark">{sections.find((item) => item.name === section)?.mark}</div><span className="section-kicker">WORKSPACE MODULE</span><h1>{section}</h1><p>{section === "System Lab" ? "A clear view of capability health, tool permissions, and test results. This panel will show real system data once the backend exposes it." : section === "Projects" ? "A home for the work you care about. Project storage is not connected yet." : section === "Research" ? "Source-backed research belongs here. Search tools will be connected through the backend, not simulated in the browser." : "Your working conversation will live here. This preview stores drafts locally in page state, but does not call an AI model."}</p>
-          {section === "Workspace" && <div className="local-messages"><span className="section-kicker">CONVERSATION</span>{messages.length === 0 && <p className="placeholder-copy">Send a message from Home to begin.</p>}{messages.map((message, index) => <div className={`local-message ${message.role}`} key={`${message.role}-${index}`}><span className="message-role">{message.role === "user" ? "YOU" : "M.A.R.S."}</span><p>{message.content}</p></div>)}{sending && <div className="local-message assistant"><span className="message-role">M.A.R.S.</span><p>Working on your request…</p></div>}</div>}<button className="back-home" onClick={() => setSection("Home")}>← Back to home</button></div>
-        )}
-        <footer className="footer-bar"><span><b className="mini-mark">M</b> M.A.R.S. <i>/</i> FOUNDATION 0.1</span><span className="footer-note">{notice}</span><span className="footer-build">BUILT FOR THE WORK <b>✳</b></span></footer>
+        </header>
+
+        <div className={messages.length ? "conversation has-messages" : "conversation"}>
+          {messages.length === 0 ? (
+            <div className="welcome">
+              <div className="welcome-mark">M</div>
+              <h1>What are we working on?</h1>
+              <p>Ask anything. Start with a question, an idea, or a problem you want to solve.</p>
+              <div className="suggestions">
+                {suggestions.map((item) => <button key={item} onClick={() => sendPrompt(undefined, item)}>{item}<span>↗</span></button>)}
+              </div>
+            </div>
+          ) : (
+            <div className="message-list">
+              {messages.map((message, index) => (
+                <article className={`message ${message.role}`} key={`${message.role}-${index}`}>
+                  {message.role === "assistant" && <div className="assistant-mark">M</div>}
+                  <div className="message-content">
+                    {message.role === "user" && <span className="message-label">You</span>}
+                    <p>{message.content}</p>
+                  </div>
+                </article>
+              ))}
+              {sending && <article className="message assistant"><div className="assistant-mark">M</div><div className="message-content"><p className="thinking">Thinking<span>.</span><span>.</span><span>.</span></p></div></article>}
+              <div ref={bottomRef} />
+            </div>
+          )}
+        </div>
+
+        <div className="composer-wrap">
+          <form className="composer" onSubmit={sendPrompt}>
+            <label className="sr-only" htmlFor="mars-composer">Message M.A.R.S.</label>
+            <textarea
+              ref={composerRef}
+              id="mars-composer"
+              value={prompt}
+              onChange={(event) => setPrompt(event.target.value)}
+              placeholder="Message M.A.R.S."
+              rows={1}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && !event.shiftKey) {
+                  event.preventDefault();
+                  event.currentTarget.form?.requestSubmit();
+                }
+              }}
+            />
+            <div className="composer-footer">
+              <span className="composer-hint">{mode === "standard" ? "Standard mode" : "Dev mode"}</span>
+              <button className="send-button" type="submit" aria-label="Send message" disabled={!prompt.trim() || sending}>{sending ? "…" : "↑"}</button>
+            </div>
+          </form>
+          <p className="disclaimer">M.A.R.S. can make mistakes. Check important information.</p>
+        </div>
       </section>
     </main>
   );
