@@ -1,4 +1,4 @@
-"""Tool contracts, registry, and research capabilities for MARS.
+"""Tool contracts, registry, research, and task planning for MARS.
 
 Copyright (c) 2026 Destiny Growrich. All rights reserved.
 Project: MARS (Multifunctional Autonomous Reasoning System)
@@ -15,6 +15,7 @@ from .planning import (
 )
 from .registry import ToolRegistry
 from .research import WebFetchTool, WebSearchTool, fetch_public_page, register_web_research_tools
+from .task_state import TaskPlanStore
 
 __all__ = [
     "ModelTurn",
@@ -27,6 +28,7 @@ __all__ = [
     "CreateTaskPlanTool",
     "PlanStep",
     "TaskPlan",
+    "TaskPlanStore",
     "register_planning_tools",
     "validate_task_plan",
     "WebFetchTool",
