@@ -131,3 +131,27 @@ print(answer)
 The caller must explicitly grant read permission before MARS can use web tools.
 
 License will be chosen before the first public release.
+
+
+## Deploy the web dashboard and API on Vercel
+
+The repository includes a multi-service Vercel configuration:
+
+- `frontend`: Next.js dashboard.
+- `app`: Python FastAPI service, entered through `api/index.py`.
+- `/api/*` routes to the Python service; all other paths route to the dashboard.
+
+### Vercel setup
+
+1. Import this repository into Vercel.
+2. In **Project Settings → Build and Deployment**, select **Services** as the framework.
+3. Keep the repository root as the project root so Vercel can read the root `vercel.json` and `requirements.txt`.
+4. Add `GEMINI_API_KEY` as a server-side environment variable if you want Gemini responses. Never add it to a `NEXT_PUBLIC_*` variable or commit it to Git.
+5. Add `MARS_API_TOKEN` as a strong, private bearer token. The chat endpoint returns `503` until this variable is configured and rejects requests without the matching bearer token.
+6. Deploy, then check `/api/health` on the deployment URL.
+
+The health endpoint confirms that the API service starts. It does not verify that Gemini credentials work. Without `GEMINI_API_KEY`, the API uses the deterministic echo provider for basic connectivity checks.
+
+**Current limitation:** the dashboard is still a visual shell and does not yet send authenticated requests to `/api/chat`. Do not expose the API token in browser-side code. A server-side frontend proxy/authentication flow must be added before connecting the dashboard chat to this protected endpoint.
+
+Vercel Services availability and configuration can change; see the [official Vercel Services guide](https://vercel.com/kb/guide/vercel-services).
