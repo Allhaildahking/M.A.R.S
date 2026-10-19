@@ -64,9 +64,13 @@ def create_app(*, mars: Mars | None = None, api_token: str | None = None) -> Fas
 
     def authorize(authorization: str | None = Header(default=None)) -> None:
         if not expected_token:
-            raise HTTPException(status_code=503, detail="MARS API authentication is not configured.")
+            raise HTTPException(
+                status_code=503,
+                detail="MARS API authentication is not configured.",
+            )
         scheme, _, supplied = (authorization or "").partition(" ")
-        if scheme.lower() != "bearer" or not supplied or not secrets.compare_digest(supplied, expected_token):
+        valid_token = supplied and secrets.compare_digest(supplied, expected_token)
+        if scheme.lower() != "bearer" or not valid_token:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid or missing API token.",
