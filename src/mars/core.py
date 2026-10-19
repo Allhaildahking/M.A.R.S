@@ -135,7 +135,12 @@ class Mars:
                     call.arguments,
                     allowed_permissions=allowed_permissions,
                 )
-                messages.append(Message(role="tool", content=self._format_tool_result(call, result)))
+                messages.append(
+                    Message(
+                        role="tool",
+                        content=self._format_tool_result(call, result),
+                    )
+                )
         if conversation is not None:
             conversation.add(Message(role="user", content=message))
             conversation.add(
