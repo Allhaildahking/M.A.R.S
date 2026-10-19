@@ -12,7 +12,7 @@ from functools import lru_cache
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, Header, HTTPException, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from .config import settings
 from .core import Mars
@@ -23,6 +23,13 @@ from .tools import ToolPermission, ToolRegistry, register_web_research_tools
 class ChatRequest(BaseModel):
     message: str = Field(min_length=1, max_length=8000)
     conversation_id: str | None = Field(default=None, max_length=128)
+
+    @field_validator("message")
+    @classmethod
+    def message_must_not_be_blank(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("Message must not be blank.")
+        return value.strip()
 
 
 class ChatResponse(BaseModel):
