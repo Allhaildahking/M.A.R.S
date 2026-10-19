@@ -303,7 +303,7 @@ class TaskPlanStore:
             self._connection.close()
             self._connection = None
 
-    def __enter__(self) -> "TaskPlanStore":
+    def __enter__(self) -> TaskPlanStore:
         return self
 
     def __exit__(self, *_: object) -> None:
