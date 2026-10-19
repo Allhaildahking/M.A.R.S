@@ -8,7 +8,6 @@ Provenance marker: MARS-DG-2026
 from __future__ import annotations
 
 import secrets
-from functools import lru_cache
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, Header, HTTPException, status
