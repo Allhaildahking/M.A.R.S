@@ -8,6 +8,7 @@ Provenance marker: MARS-DG-2026
 from __future__ import annotations
 
 import secrets
+
 from fastapi import Depends, FastAPI, Header, HTTPException, status
 from pydantic import BaseModel, Field, field_validator
 
