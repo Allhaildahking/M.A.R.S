@@ -27,7 +27,8 @@ Core principles:
 - Public web-page retrieval with readable text extraction and content limits
 - Network safety checks that reject private/local hosts and unsafe redirects
 - End-to-end automated tests for search, page retrieval, and source-cited responses
-- Validated task-plan drafting with dependency and cycle checks; plan creation never executes steps
+- Validated task-plan drafting with dependency and cycle checks
+- Persistent task-plan lifecycle with dependency readiness, explicit approval gates, and step status tracking; lifecycle updates never execute external actions
 
 ### Run the HTTP API and dashboard locally
 
@@ -128,6 +129,42 @@ result = CreateTaskPlanTool().execute(
 if result.success:
     print(result.output)
 ```
+
+### Track a task plan safely
+
+`TaskPlanStore` saves plans in SQLite and tracks progress across restarts. It does not execute the work described by a step. Steps with dependencies cannot start until those dependencies are completed, and steps marked `requires_approval` cannot start until explicitly approved.
+
+```python
+from mars.tools import TaskPlanStore
+
+with TaskPlanStore("data/mars_tasks.db") as tasks:
+    plan = tasks.create_plan({
+        "goal": "Prepare a portfolio launch",
+        "steps": [
+            {
+                "id": "draft",
+                "title": "Draft the launch post",
+                "description": "Write the post.",
+            },
+            {
+                "id": "publish",
+                "title": "Publish the post",
+                "description": "Publish after explicit approval.",
+                "depends_on": ["draft"],
+                "requires_approval": True,
+            },
+        ],
+    })
+
+    # Read ready_to_start, blocked_reason, and status for each step.
+    print(plan)
+    tasks.start_step(plan["id"], "draft")
+    plan = tasks.complete_step(plan["id"], "draft")
+    tasks.approve_step(plan["id"], "publish")
+    plan = tasks.start_step(plan["id"], "publish")
+```
+
+Calling `start_step` only changes the tracked status to `in_progress`; it does not publish, send, delete, or otherwise perform the described action. External execution will need its own permission checks and action-specific approval controls.
 
 ### Use web research in your own code
 
