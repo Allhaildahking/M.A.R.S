@@ -123,14 +123,34 @@ class Mars:
                     conversation.add(Message(role="user", content=message))
                     conversation.add(Message(role="assistant", content=turn.text))
                 return turn.text
-            messages.append(Message(role="assistant", content=self._format_tool_calls(turn.tool_calls)))
+            messages.append(
+                Message(
+                    role="assistant",
+                    content=self._format_tool_calls(turn.tool_calls),
+                )
+            )
             for call in turn.tool_calls:
-                result = self.execute_tool(call.name, call.arguments, allowed_permissions=allowed_permissions)
+                result = self.execute_tool(
+                    call.name,
+                    call.arguments,
+                    allowed_permissions=allowed_permissions,
+                )
                 messages.append(Message(role="tool", content=self._format_tool_result(call, result)))
         if conversation is not None:
             conversation.add(Message(role="user", content=message))
-            conversation.add(Message(role="assistant", content="MARS stopped the tool loop after reaching its safety limit. The requested task may require another step."))
-        return "MARS stopped the tool loop after reaching its safety limit. The requested task may require another step."
+            conversation.add(
+                Message(
+                    role="assistant",
+                    content=(
+                        "MARS stopped the tool loop after reaching its safety limit. "
+                        "The requested task may require another step."
+                    ),
+                )
+            )
+        return (
+            "MARS stopped the tool loop after reaching its safety limit. "
+            "The requested task may require another step."
+        )
 
     @staticmethod
     def _format_tool_calls(tool_calls: tuple[ToolCall, ...]) -> str:
