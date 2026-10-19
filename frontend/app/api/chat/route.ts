@@ -37,6 +37,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const body = payload as { conversation_id?: unknown; mode?: unknown };
+  const mode = body.mode === "dev" ? "dev" : "standard";
   let upstream: Response;
   try {
     upstream = await fetch(new URL("/v1/chat", apiUrl), {
@@ -47,10 +49,9 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify({
         message,
+        mode,
         conversation_id:
-          typeof (payload as { conversation_id?: unknown }).conversation_id === "string"
-            ? (payload as { conversation_id: string }).conversation_id
-            : null,
+          typeof body.conversation_id === "string" ? body.conversation_id : null,
       }),
       cache: "no-store",
     });
@@ -61,12 +62,14 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const body = await upstream.json().catch(() => null);
+  const responseBody = await upstream.json().catch(() => null);
   if (!upstream.ok) {
     const detail =
-      typeof body?.detail === "string" ? body.detail : "MARS could not complete the request.";
+      typeof responseBody?.detail === "string"
+        ? responseBody.detail
+        : "MARS could not complete the request.";
     return NextResponse.json({ error: detail }, { status: upstream.status });
   }
 
-  return NextResponse.json(body, { status: 200 });
+  return NextResponse.json(responseBody, { status: 200 });
 }
