@@ -49,6 +49,4 @@ def test_chat_rejects_blank_message() -> None:
         headers={"Authorization": "Bearer test-token"},
     )
 
-    # Whitespace is a non-empty string at schema level, but should not trigger
-    # a model call. The API currently validates length, not semantic content.
-    assert response.status_code == 200
+    assert response.status_code == 422
