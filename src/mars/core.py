@@ -58,12 +58,11 @@ class Mars:
         self,
         message: str,
         history: list[Message] | None,
+        extra_system_instructions: str | None = None,
     ) -> list[Message]:
-        messages = [
-            Message(role="system", content=MARS_SYSTEM_INSTRUCTIONS),
-            *(history or []),
-        ]
-
+        messages = [Message(role="system", content=MARS_SYSTEM_INSTRUCTIONS), *(history or [])]
+        if extra_system_instructions:
+            messages.append(Message(role="system", content=extra_system_instructions))
         if self.memory is not None:
             memories = self.memory.recall(message)
             if memories:
@@ -79,7 +78,6 @@ class Mars:
                         ),
                     )
                 )
-
         messages.append(Message(role="user", content=message))
         return messages
 
@@ -90,26 +88,25 @@ class Mars:
         *,
         conversation_id: str | None = None,
         allowed_permissions: set[ToolPermission] | None = None,
+        extra_system_instructions: str | None = None,
     ) -> str:
         if self.memory is not None and self.auto_remember:
             self.memory.remember_if_worthwhile(message)
-
         session_history = history
         conversation = None
         if conversation_id is not None:
             conversation = self.conversations.get_or_create(conversation_id)
             session_history = conversation.history()
-
-        messages = self._build_messages(message, session_history)
+        messages = self._build_messages(
+            message, session_history, extra_system_instructions=extra_system_instructions
+        )
         generate_turn = getattr(self.provider, "generate_turn", None)
-
         if generate_turn is None:
             response = self.provider.generate(messages)
             if conversation is not None:
                 conversation.add(Message(role="user", content=message))
                 conversation.add(Message(role="assistant", content=response))
             return response
-
         tool_specs = [
             {
                 "name": spec.name,
@@ -119,7 +116,6 @@ class Mars:
             }
             for spec in self.tools.list_specs()
         ]
-
         for _ in range(self.max_tool_rounds):
             turn: ModelTurn = generate_turn(messages, tool_specs)
             if not turn.tool_calls:
@@ -127,54 +123,19 @@ class Mars:
                     conversation.add(Message(role="user", content=message))
                     conversation.add(Message(role="assistant", content=turn.text))
                 return turn.text
-
-            messages.append(
-                Message(
-                    role="assistant",
-                    content=self._format_tool_calls(turn.tool_calls),
-                )
-            )
-
+            messages.append(Message(role="assistant", content=self._format_tool_calls(turn.tool_calls)))
             for call in turn.tool_calls:
-                result = self.execute_tool(
-                    call.name,
-                    call.arguments,
-                    allowed_permissions=allowed_permissions,
-                )
-                messages.append(
-                    Message(
-                        role="tool",
-                        content=self._format_tool_result(call, result),
-                    )
-                )
-
+                result = self.execute_tool(call.name, call.arguments, allowed_permissions=allowed_permissions)
+                messages.append(Message(role="tool", content=self._format_tool_result(call, result)))
         if conversation is not None:
             conversation.add(Message(role="user", content=message))
-            conversation.add(
-                Message(
-                    role="assistant",
-                    content=(
-                        "MARS stopped the tool loop after reaching its safety limit. "
-                        "The requested task may require another step."
-                    ),
-                )
-            )
-
-        return (
-            "MARS stopped the tool loop after reaching its safety limit. "
-            "The requested task may require another step."
-        )
+            conversation.add(Message(role="assistant", content="MARS stopped the tool loop after reaching its safety limit. The requested task may require another step."))
+        return "MARS stopped the tool loop after reaching its safety limit. The requested task may require another step."
 
     @staticmethod
     def _format_tool_calls(tool_calls: tuple[ToolCall, ...]) -> str:
-        calls = [
-            {"name": call.name, "arguments": call.arguments}
-            for call in tool_calls
-        ]
-        return json.dumps(
-            {"text": "", "tool_calls": calls},
-            ensure_ascii=False,
-        )
+        calls = [{"name": call.name, "arguments": call.arguments} for call in tool_calls]
+        return json.dumps({"text": "", "tool_calls": calls}, ensure_ascii=False)
 
     @staticmethod
     def _format_tool_result(call: ToolCall, result: ToolResult) -> str:
@@ -190,8 +151,4 @@ class Mars:
         allowed_permissions: set[ToolPermission] | None = None,
     ) -> ToolResult:
         """Execute a registered tool through the permission boundary."""
-        return self.tools.execute(
-            name,
-            arguments,
-            allowed_permissions=allowed_permissions,
-        )
+        return self.tools.execute(name, arguments, allowed_permissions=allowed_permissions)
