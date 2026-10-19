@@ -14,7 +14,12 @@ from pydantic import BaseModel, Field
 
 from mars.core import Mars
 from mars.providers import EchoProvider, GeminiProvider
-from mars.tools import ToolPermission, ToolRegistry, register_planning_tools, register_web_research_tools
+from mars.tools import (
+    ToolPermission,
+    ToolRegistry,
+    register_planning_tools,
+    register_web_research_tools,
+)
 
 app = FastAPI(
     title="M.A.R.S. API",
@@ -55,10 +60,17 @@ def require_api_token(
     if not expected:
         raise HTTPException(
             status_code=503,
-            detail="Chat API is not enabled. Configure MARS_API_TOKEN in the deployment environment.",
+            detail=(
+                "Chat API is not enabled. Configure MARS_API_TOKEN "
+                "in the deployment environment."
+            ),
         )
     scheme, _, supplied = (authorization or "").partition(" ")
-    if scheme.lower() != "bearer" or not supplied or not hmac.compare_digest(supplied, expected):
+    if (
+        scheme.lower() != "bearer"
+        or not supplied
+        or not hmac.compare_digest(supplied, expected)
+    ):
         raise HTTPException(status_code=401, detail="A valid bearer token is required.")
 
 
@@ -68,7 +80,11 @@ def health() -> dict[str, str]:
     return {"status": "ok", "service": "mars-api", "provider": provider_name}
 
 
-@app.post("/api/chat", response_model=ChatResponse, dependencies=[Depends(require_api_token)])
+@app.post(
+    "/api/chat",
+    response_model=ChatResponse,
+    dependencies=[Depends(require_api_token)],
+)
 def chat(payload: ChatRequest) -> ChatResponse:
     """Generate a response after explicit API authentication."""
     try:
@@ -79,7 +95,10 @@ def chat(payload: ChatRequest) -> ChatResponse:
         )
     except Exception as error:
         # Avoid returning provider exception details or secrets to the caller.
-        raise HTTPException(status_code=502, detail="M.A.R.S. could not complete the request.") from error
+        raise HTTPException(
+            status_code=502,
+            detail="M.A.R.S. could not complete the request.",
+        ) from error
     return ChatResponse(
         response=response,
         conversation_id=payload.conversation_id,
