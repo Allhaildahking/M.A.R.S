@@ -29,6 +29,25 @@ Core principles:
 - End-to-end automated tests for search, page retrieval, and source-cited responses
 - Validated task-plan drafting with dependency and cycle checks; plan creation never executes steps
 
+### Run the HTTP API and dashboard locally
+
+Install the API dependencies with the development extras, then set both secrets in your shell:
+
+```bash
+export GEMINI_API_KEY="your-key"
+export MARS_API_TOKEN="a-long-random-secret"
+uvicorn mars.api:app --host 127.0.0.1 --port 8000
+```
+
+Set the same token in `frontend/.env.local`. These values are server-only, not browser variables:
+
+```dotenv
+MARS_API_URL=http://127.0.0.1:8000
+MARS_API_TOKEN=a-long-random-secret
+```
+
+Run the dashboard from `frontend/` with `npm run dev`. The Next.js server proxies chat requests to the API, so the shared token is never sent to the browser. For a deployed dashboard, configure the same two variables in the hosting environment and point `MARS_API_URL` to an HTTPS backend. Do not use a `NEXT_PUBLIC_` prefix for the token. The chat endpoint grants read-only tool permissions; it does not enable write or execution tools.
+
 ## Planned capabilities
 
 - Writing and document assistance
