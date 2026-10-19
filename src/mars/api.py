@@ -8,8 +8,6 @@ Provenance marker: MARS-DG-2026
 from __future__ import annotations
 
 import secrets
-from typing import Annotated
-
 from fastapi import Depends, FastAPI, Header, HTTPException, status
 from pydantic import BaseModel, Field, field_validator
 
@@ -66,9 +64,7 @@ def create_app(*, mars: Mars | None = None, api_token: str | None = None) -> Fas
     def health() -> HealthResponse:
         return HealthResponse(status="ok", service="mars-api")
 
-    def authorize(
-        authorization: Annotated[str | None, Header()] = None,
-    ) -> None:
+    def authorize(authorization: str | None = Header(default=None)) -> None:
         if not expected_token:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -87,7 +83,7 @@ def create_app(*, mars: Mars | None = None, api_token: str | None = None) -> Fas
     @app.post("/v1/chat", response_model=ChatResponse)
     def chat(
         payload: ChatRequest,
-        _: Annotated[None, Depends(authorize)],
+        _: None = Depends(authorize),
     ) -> ChatResponse:
         engine = mars
         if engine is None:
