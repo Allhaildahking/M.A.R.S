@@ -42,7 +42,25 @@ python -m pip install -e ".[dev]"
 
 On Windows, activate the environment with `.venv\\Scripts\\activate`.
 
-Copy `.env.example` to `.env` and set the values needed for the features you want to use. Never commit real API keys or tokens. `GEMINI_API_KEY` is required for live Gemini responses; tests that don't make live provider calls should run without it.
+Copy `.env.example` to `.env`, then set the values needed for the features you want to use. Never commit real API keys or tokens. `GEMINI_API_KEY` is required for live Gemini responses; tests that do not make live provider calls should run without it.
+
+Before starting the API, set a private token and your provider key in the shell:
+
+```bash
+export GEMINI_API_KEY="your-key"
+export MARS_API_TOKEN="a-long-random-secret"
+uvicorn mars.api:app --host 127.0.0.1 --port 8000
+```
+
+On Windows PowerShell:
+
+```powershell
+$env:GEMINI_API_KEY = "your-key"
+$env:MARS_API_TOKEN = "a-long-random-secret"
+uvicorn mars.api:app --host 127.0.0.1 --port 8000
+```
+
+The API health endpoint is available at `/health`. The API chat endpoint requires a matching bearer token. Do not put `MARS_API_TOKEN` in a `NEXT_PUBLIC_*` variable or browser-side code.
 
 ### Run tests and inspect coverage
 
@@ -51,26 +69,17 @@ pytest
 pytest --cov=mars --cov-report=term-missing
 ```
 
-The coverage command reports covered and missed lines but does not yet enforce a minimum threshold. We'll set a threshold only after measuring the current baseline and bringing the suite up to it.
+CI enforces a minimum of 80% total line coverage. The current measured baseline is 84% across 57 tests, so the threshold is below the observed baseline while still catching meaningful regressions. If the test suite changes substantially, review the threshold rather than lowering it automatically.
 
-### Run the HTTP API and dashboard locally
-
-Set the API token and provider key in your shell:
+### Run the dashboard locally
 
 ```bash
-export GEMINI_API_KEY="your-key"
-export MARS_API_TOKEN="a-long-random-secret"
-uvicorn mars.api:app --host 127.0.0.1 --port 8000
+cd frontend
+npm install
+npm run dev
 ```
 
-Set the same token in `frontend/.env.local`. These values are server-only, not browser variables:
-
-```dotenv
-MARS_API_URL=http://127.0.0.1:8000
-MARS_API_TOKEN=a-long-random-secret
-```
-
-Run the dashboard from `frontend/` with `npm run dev`. The Next.js server proxies chat requests to the API, so the shared token must never be sent to the browser. For a deployed dashboard, configure the same two variables in the hosting environment and point `MARS_API_URL` to an HTTPS backend. Do not use a `NEXT_PUBLIC_` prefix for the token. The chat endpoint grants read-only tool permissions; it does not enable write or execution tools.
+The dashboard is currently a visual shell and does not yet send authenticated requests to the API. Do not add the API token to frontend/browser code. A server-side proxy and authentication flow must be implemented before connecting dashboard chat to the protected API.
 
 ### Run a live research smoke test
 
