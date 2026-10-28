@@ -44,21 +44,13 @@ On Windows, activate the environment with `.venv\\Scripts\\activate`.
 
 Copy `.env.example` to `.env`, then set the values needed for the features you want to use. Never commit real API keys or tokens. `GEMINI_API_KEY` is required for live Gemini responses; tests that do not make live provider calls should run without it.
 
-Before starting the API, set a private token and your provider key in the shell:
+The API reads settings from environment variables. To load the values from the `.env` file you copied, start Uvicorn with `--env-file .env` (the installed `uvicorn[standard]` extra provides dotenv support):
 
 ```bash
-export GEMINI_API_KEY="your-key"
-export MARS_API_TOKEN="a-long-random-secret"
-uvicorn mars.api:app --host 127.0.0.1 --port 8000
+uvicorn mars.api:app --env-file .env --host 127.0.0.1 --port 8000
 ```
 
-On Windows PowerShell:
-
-```powershell
-$env:GEMINI_API_KEY = "your-key"
-$env:MARS_API_TOKEN = "a-long-random-secret"
-uvicorn mars.api:app --host 127.0.0.1 --port 8000
-```
+Alternatively, export `GEMINI_API_KEY` and `MARS_API_TOKEN` in your shell before starting Uvicorn. On Windows PowerShell, you can set `$env:GEMINI_API_KEY` and `$env:MARS_API_TOKEN` first, then run the same command without `--env-file .env` if you do not want to load the file.
 
 When running `uvicorn mars.api:app` locally, the health endpoint is `/health` and chat is served at `/v1/chat`. Both require the API token for chat requests as appropriate. On Vercel, the public health endpoint is `/api/health`; the API service also exposes `/v1/chat` so the dashboard proxy can use the same versioned chat path in both environments. Do not put `MARS_API_TOKEN` in a `NEXT_PUBLIC_*` variable or browser-side code.
 
