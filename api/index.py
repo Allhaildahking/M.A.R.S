@@ -85,6 +85,11 @@ def health() -> dict[str, str]:
     response_model=ChatResponse,
     dependencies=[Depends(require_api_token)],
 )
+@app.post(
+    "/v1/chat",
+    response_model=ChatResponse,
+    dependencies=[Depends(require_api_token)],
+)
 def chat(payload: ChatRequest) -> ChatResponse:
     """Generate a response after explicit API authentication."""
     try:
