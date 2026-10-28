@@ -60,7 +60,7 @@ $env:MARS_API_TOKEN = "a-long-random-secret"
 uvicorn mars.api:app --host 127.0.0.1 --port 8000
 ```
 
-The FastAPI health endpoint is available at `/api/health`, and chat is served at `/api/chat`. Chat requires a matching bearer token. Do not put `MARS_API_TOKEN` in a `NEXT_PUBLIC_*` variable or browser-side code.
+When running `uvicorn mars.api:app` locally, the health endpoint is `/health` and chat is served at `/v1/chat`. Both require the API token for chat requests as appropriate. On Vercel, the public health endpoint is `/api/health`; the API service also exposes `/v1/chat` so the dashboard proxy can use the same versioned chat path in both environments. Do not put `MARS_API_TOKEN` in a `NEXT_PUBLIC_*` variable or browser-side code.
 
 ### Run tests and inspect coverage
 
@@ -86,7 +86,7 @@ MARS_API_URL=http://127.0.0.1:8000
 MARS_API_TOKEN=a-long-random-secret
 ```
 
-Keep these variables server-side. Never use a `NEXT_PUBLIC_*` prefix for the token. The API base URL must point directly to the FastAPI service, not back to the Next.js proxy, or requests will loop.
+Keep these variables server-side. Never use a `NEXT_PUBLIC_*` prefix for the token. The API base URL must point directly to the FastAPI service, not back to the Next.js proxy, or requests will loop. The proxy calls the versioned `/v1/chat` endpoint in both local and Vercel environments.
 
 ### Run a live research smoke test
 
@@ -221,7 +221,7 @@ The repository includes a multi-service Vercel configuration:
 
 - `frontend`: Next.js dashboard.
 - `app`: Python FastAPI service, entered through `api/index.py`.
-- `/api/chat` routes to the Next.js server proxy, which adds the bearer token and forwards to the FastAPI service.
+- `/api/chat` routes to the Next.js server proxy, which adds the bearer token and forwards to the FastAPI service's `/v1/chat` endpoint.
 - Other `/api/*` routes, including `/api/health`, route to FastAPI; all other paths route to the dashboard.
 
 ### Vercel setup
@@ -236,6 +236,6 @@ The repository includes a multi-service Vercel configuration:
 
 The health endpoint confirms that the API service starts. It does not verify that Gemini credentials work. Without `GEMINI_API_KEY`, the API uses the deterministic echo provider for basic connectivity checks.
 
-The dashboard's server route proxies chat requests to the FastAPI service and keeps the bearer token out of browser code. Configure `MARS_API_URL` to the direct backend service URL and `MARS_API_TOKEN` as server-side environment variables for the frontend service. The backend must have the same token configured. Do not point `MARS_API_URL` at the public frontend URL, which can create a proxy loop. The Vercel rewrite routes `/api/chat` through the frontend proxy and other `/api/*` endpoints, including `/api/health`, to FastAPI.
+The dashboard's server route proxies chat requests to the FastAPI service and keeps the bearer token out of browser code. Configure `MARS_API_URL` to the direct backend service URL and `MARS_API_TOKEN` as server-side environment variables for the frontend service. The backend must have the same token configured. Do not point `MARS_API_URL` at the public frontend URL, which can create a proxy loop. The Vercel rewrite routes public `/api/chat` through the frontend proxy and other `/api/*` endpoints, including `/api/health`, to FastAPI. The proxy uses the versioned `/v1/chat` route on the backend service.
 
 Vercel Services availability and configuration can change; see the [official Vercel Services guide](https://vercel.com/kb/guide/vercel-services).
