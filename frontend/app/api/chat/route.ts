@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
 
   let upstream: Response;
   try {
-    upstream = await fetch(new URL("/v1/chat", apiUrl), {
+    upstream = await fetch(new URL("/api/chat", apiUrl), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -68,5 +68,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: detail }, { status: upstream.status });
   }
 
-  return NextResponse.json(body, { status: 200 });
+  // The FastAPI response schema uses "response"; the dashboard consumes "answer".
+  if (typeof body?.response !== "string") {
+    return NextResponse.json(
+      { error: "MARS backend returned an unexpected response." },
+      { status: 502 },
+    );
+  }
+
+  return NextResponse.json({
+    answer: body.response,
+    conversation_id: body.conversation_id ?? null,
+    provider: body.provider ?? "unknown",
+  });
 }
