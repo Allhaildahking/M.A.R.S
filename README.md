@@ -221,19 +221,21 @@ The repository includes a multi-service Vercel configuration:
 
 - `frontend`: Next.js dashboard.
 - `app`: Python FastAPI service, entered through `api/index.py`.
-- `/api/*` routes to the Python service; all other paths route to the dashboard.
+- `/api/chat` routes to the Next.js server proxy, which adds the bearer token and forwards to the FastAPI service.
+- Other `/api/*` routes, including `/api/health`, route to FastAPI; all other paths route to the dashboard.
 
 ### Vercel setup
 
 1. Import this repository into Vercel.
 2. In **Project Settings → Build and Deployment**, select **Services** as the framework.
 3. Keep the repository root as the project root so Vercel can read the root `vercel.json` and `requirements.txt`.
-4. Add `GEMINI_API_KEY` as a server-side environment variable if you want Gemini responses. Never add it to a `NEXT_PUBLIC_*` variable or commit it to Git.
-5. Add `MARS_API_TOKEN` as a strong, private bearer token. The chat endpoint returns `503` until this variable is configured and rejects requests without the matching bearer token.
-6. Deploy, then check `/api/health` on the deployment URL.
+4. Add `GEMINI_API_KEY` as a server-side environment variable on the API service if you want Gemini responses. Never add it to a `NEXT_PUBLIC_*` variable or commit it to Git.
+5. Add the same strong, private `MARS_API_TOKEN` to both the API service and the frontend service's server-side environment.
+6. Set `MARS_API_URL` on the frontend service to the direct URL of the FastAPI service, not the public frontend URL.
+7. Deploy, then check `/api/health` on the public deployment URL and send a test message through the dashboard.
 
 The health endpoint confirms that the API service starts. It does not verify that Gemini credentials work. Without `GEMINI_API_KEY`, the API uses the deterministic echo provider for basic connectivity checks.
 
-The dashboard's server route proxies chat requests to the FastAPI service and keeps the bearer token out of browser code. Configure `MARS_API_URL` to the backend service URL and `MARS_API_TOKEN` as server-side environment variables for the frontend service. The backend must have the same token configured. Do not point `MARS_API_URL` at the public frontend URL, which can create a proxy loop. Verify the deployment's service routing after configuration; the public `/api/health` route should still reach FastAPI.
+The dashboard's server route proxies chat requests to the FastAPI service and keeps the bearer token out of browser code. Configure `MARS_API_URL` to the direct backend service URL and `MARS_API_TOKEN` as server-side environment variables for the frontend service. The backend must have the same token configured. Do not point `MARS_API_URL` at the public frontend URL, which can create a proxy loop. The Vercel rewrite routes `/api/chat` through the frontend proxy and other `/api/*` endpoints, including `/api/health`, to FastAPI.
 
 Vercel Services availability and configuration can change; see the [official Vercel Services guide](https://vercel.com/kb/guide/vercel-services).
