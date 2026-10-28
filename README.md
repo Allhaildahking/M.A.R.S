@@ -60,7 +60,7 @@ $env:MARS_API_TOKEN = "a-long-random-secret"
 uvicorn mars.api:app --host 127.0.0.1 --port 8000
 ```
 
-The API health endpoint is available at `/health`. The API chat endpoint requires a matching bearer token. Do not put `MARS_API_TOKEN` in a `NEXT_PUBLIC_*` variable or browser-side code.
+The FastAPI health endpoint is available at `/api/health`, and chat is served at `/api/chat`. Chat requires a matching bearer token. Do not put `MARS_API_TOKEN` in a `NEXT_PUBLIC_*` variable or browser-side code.
 
 ### Run tests and inspect coverage
 
@@ -79,7 +79,14 @@ npm install
 npm run dev
 ```
 
-The dashboard is currently a visual shell and does not yet send authenticated requests to the API. Do not add the API token to frontend/browser code. A server-side proxy and authentication flow must be implemented before connecting dashboard chat to the protected API.
+The dashboard's `/api/chat` server route proxies requests to the FastAPI service and adds the bearer token on the server, so the token is not sent to browser code. Create `frontend/.env.local` with the backend base URL and the same token configured for the API:
+
+```dotenv
+MARS_API_URL=http://127.0.0.1:8000
+MARS_API_TOKEN=a-long-random-secret
+```
+
+Keep these variables server-side. Never use a `NEXT_PUBLIC_*` prefix for the token. The API base URL must point directly to the FastAPI service, not back to the Next.js proxy, or requests will loop.
 
 ### Run a live research smoke test
 
@@ -227,6 +234,6 @@ The repository includes a multi-service Vercel configuration:
 
 The health endpoint confirms that the API service starts. It does not verify that Gemini credentials work. Without `GEMINI_API_KEY`, the API uses the deterministic echo provider for basic connectivity checks.
 
-**Current limitation:** the dashboard is still a visual shell and does not yet send authenticated requests to `/api/chat`. Do not expose the API token in browser-side code. A server-side frontend proxy/authentication flow must be added before connecting the dashboard chat to this protected endpoint.
+The dashboard's server route proxies chat requests to the FastAPI service and keeps the bearer token out of browser code. Configure `MARS_API_URL` to the backend service URL and `MARS_API_TOKEN` as server-side environment variables for the frontend service. The backend must have the same token configured. Do not point `MARS_API_URL` at the public frontend URL, which can create a proxy loop. Verify the deployment's service routing after configuration; the public `/api/health` route should still reach FastAPI.
 
 Vercel Services availability and configuration can change; see the [official Vercel Services guide](https://vercel.com/kb/guide/vercel-services).
