@@ -30,9 +30,32 @@ Core principles:
 - Validated task-plan drafting with dependency and cycle checks
 - Persistent task-plan lifecycle with dependency readiness, explicit approval gates, and step status tracking; lifecycle updates never execute external actions
 
+## Run locally
+
+Development target: Python 3.12+.
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -e ".[dev]"
+```
+
+On Windows, activate the environment with `.venv\\Scripts\\activate`.
+
+Copy `.env.example` to `.env` and set the values needed for the features you want to use. Never commit real API keys or tokens. `GEMINI_API_KEY` is required for live Gemini responses; tests that don't make live provider calls should run without it.
+
+### Run tests and inspect coverage
+
+```bash
+pytest
+pytest --cov=mars --cov-report=term-missing
+```
+
+The coverage command reports covered and missed lines but does not yet enforce a minimum threshold. We'll set a threshold only after measuring the current baseline and bringing the suite up to it.
+
 ### Run the HTTP API and dashboard locally
 
-Install the API dependencies with the development extras, then set both secrets in your shell:
+Set the API token and provider key in your shell:
 
 ```bash
 export GEMINI_API_KEY="your-key"
@@ -47,32 +70,7 @@ MARS_API_URL=http://127.0.0.1:8000
 MARS_API_TOKEN=a-long-random-secret
 ```
 
-Run the dashboard from `frontend/` with `npm run dev`. The Next.js server proxies chat requests to the API, so the shared token is never sent to the browser. For a deployed dashboard, configure the same two variables in the hosting environment and point `MARS_API_URL` to an HTTPS backend. Do not use a `NEXT_PUBLIC_` prefix for the token. The chat endpoint grants read-only tool permissions; it does not enable write or execution tools.
-
-## Planned capabilities
-
-- Writing and document assistance
-- Software development tools
-- Market analysis
-- Controlled trading execution
-- Task execution with explicit approvals and independent permission checks
-- Task planning and automation
-- Telegram/web interfaces
-- Scheduled workflows
-
-## Run locally
-
-Development target: Python 3.12+.
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-python -m pip install -e ".[dev]"
-```
-
-On Windows, activate the environment with `.venv\\Scripts\\activate`.
-
-Set `GEMINI_API_KEY` in your environment before using `GeminiProvider`. Never commit API keys to the repository.
+Run the dashboard from `frontend/` with `npm run dev`. The Next.js server proxies chat requests to the API, so the shared token must never be sent to the browser. For a deployed dashboard, configure the same two variables in the hosting environment and point `MARS_API_URL` to an HTTPS backend. Do not use a `NEXT_PUBLIC_` prefix for the token. The chat endpoint grants read-only tool permissions; it does not enable write or execution tools.
 
 ### Run a live research smoke test
 
@@ -99,6 +97,8 @@ python scripts/smoke_test_research.py "Find a recent official NASA Artemis updat
 ```
 
 The script never prints the API key. It returns a non-zero exit code if the key is missing, the live request fails, the answer is empty, or the answer contains no source URLs. A passing run verifies a live answer with source links, but does not guarantee that every fact is correct.
+
+## Use task planning
 
 ### Draft a validated task plan
 
@@ -166,7 +166,7 @@ with TaskPlanStore("data/mars_tasks.db") as tasks:
 
 Calling `start_step` only changes the tracked status to `in_progress`; it does not publish, send, delete, or otherwise perform the described action. External execution will need its own permission checks and action-specific approval controls.
 
-### Use web research in your own code
+## Use web research in your own code
 
 ```python
 from mars.core import Mars
@@ -186,8 +186,18 @@ print(answer)
 
 The caller must explicitly grant read permission before MARS can use web tools.
 
-License will be chosen before the first public release.
+## Planned capabilities
 
+- Writing and document assistance
+- Software development tools
+- Market analysis
+- Controlled trading execution
+- Task execution with explicit approvals and independent permission checks
+- Task planning and automation
+- Telegram/web interfaces
+- Scheduled workflows
+
+License will be chosen before the first public release.
 
 ## Deploy the web dashboard and API on Vercel
 
