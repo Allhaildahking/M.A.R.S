@@ -68,5 +68,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: detail }, { status: upstream.status });
   }
 
-  return NextResponse.json(body, { status: 200 });
+  // The local API returns "answer"; the Vercel API currently returns "response".
+  const answer = typeof body?.answer === "string" ? body.answer : body?.response;
+  if (typeof answer !== "string") {
+    return NextResponse.json(
+      { error: "MARS backend returned an unexpected response." },
+      { status: 502 },
+    );
+  }
+
+  return NextResponse.json({
+    answer,
+    conversation_id: body.conversation_id ?? null,
+    provider: body.provider ?? "unknown",
+  });
 }

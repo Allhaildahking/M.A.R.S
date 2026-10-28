@@ -75,6 +75,7 @@ def require_api_token(
 
 
 @app.get("/api/health")
+@app.get("/health")
 def health() -> dict[str, str]:
     """Non-sensitive readiness check; never exposes configuration or secrets."""
     return {"status": "ok", "service": "mars-api", "provider": provider_name}
@@ -82,6 +83,11 @@ def health() -> dict[str, str]:
 
 @app.post(
     "/api/chat",
+    response_model=ChatResponse,
+    dependencies=[Depends(require_api_token)],
+)
+@app.post(
+    "/v1/chat",
     response_model=ChatResponse,
     dependencies=[Depends(require_api_token)],
 )
