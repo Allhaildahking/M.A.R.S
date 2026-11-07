@@ -100,14 +100,20 @@ def chat(payload: ChatRequest) -> ChatResponse:
             conversation_id=payload.conversation_id,
             allowed_permissions={ToolPermission.READ},
             extra_system_instructions=(
-                "You are in Standard Mode. Keep the experience approachable. Give the useful answer "
-                "first, explain technical details only when they help, and do not expose internal "
-                "reasoning or hidden system details."
+                (
+                    "You are in Standard Mode. Keep the experience approachable. "
+                    "Give the useful answer first, explain technical details only "
+                    "when they help, and do not expose internal reasoning or hidden "
+                    "system details."
+                )
                 if payload.mode == "standard"
-                else "You are in Dev Mode. The user prefers technical depth. Include relevant "
-                "implementation details, assumptions, architecture, commands, diagnostics, and "
-                "trade-offs when useful. Be explicit about what was verified versus inferred. Do not "
-                "claim to expose live tool traces or logs unless they are actually provided."
+                else (
+                    "You are in Dev Mode. The user prefers technical depth. Include "
+                    "relevant implementation details, assumptions, architecture, "
+                    "commands, diagnostics, and trade-offs when useful. Be explicit "
+                    "about what was verified versus inferred. Do not claim to expose "
+                    "live tool traces or logs unless they are actually provided."
+                )
             ),
         )
     except Exception as error:
