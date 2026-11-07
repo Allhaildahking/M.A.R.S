@@ -7,7 +7,7 @@ Provenance marker: MARS-DG-2026
 
 import hmac
 import os
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import Depends, FastAPI, Header, HTTPException
 from pydantic import BaseModel, Field
@@ -31,6 +31,7 @@ app = FastAPI(
 class ChatRequest(BaseModel):
     message: str = Field(min_length=1, max_length=12000)
     conversation_id: str | None = Field(default=None, max_length=120)
+    mode: Literal["standard", "dev"] = "standard"
 
 
 class ChatResponse(BaseModel):
@@ -75,6 +76,7 @@ def require_api_token(
 
 
 @app.get("/api/health")
+@app.get("/health")
 def health() -> dict[str, str]:
     """Non-sensitive readiness check; never exposes configuration or secrets."""
     return {"status": "ok", "service": "mars-api", "provider": provider_name}
@@ -85,6 +87,11 @@ def health() -> dict[str, str]:
     response_model=ChatResponse,
     dependencies=[Depends(require_api_token)],
 )
+@app.post(
+    "/v1/chat",
+    response_model=ChatResponse,
+    dependencies=[Depends(require_api_token)],
+)
 def chat(payload: ChatRequest) -> ChatResponse:
     """Generate a response after explicit API authentication."""
     try:
@@ -92,6 +99,16 @@ def chat(payload: ChatRequest) -> ChatResponse:
             payload.message,
             conversation_id=payload.conversation_id,
             allowed_permissions={ToolPermission.READ},
+            extra_system_instructions=(
+                "You are in Standard Mode. Keep the experience approachable. Give the useful answer "
+                "first, explain technical details only when they help, and do not expose internal "
+                "reasoning or hidden system details."
+                if payload.mode == "standard"
+                else "You are in Dev Mode. The user prefers technical depth. Include relevant "
+                "implementation details, assumptions, architecture, commands, diagnostics, and "
+                "trade-offs when useful. Be explicit about what was verified versus inferred. Do not "
+                "claim to expose live tool traces or logs unless they are actually provided."
+            ),
         )
     except Exception as error:
         # Avoid returning provider exception details or secrets to the caller.
