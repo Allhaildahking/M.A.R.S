@@ -64,12 +64,18 @@ export default function HomePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: value, conversation_id: conversationId, mode }),
       });
-      const payload = await response.json();
+      const raw = await response.text();
+      let payload: { answer?: unknown; error?: unknown };
+      try {
+        payload = JSON.parse(raw) as { answer?: unknown; error?: unknown };
+      } catch {
+        throw new Error(`M.A.R.S. returned an unreadable response (HTTP ${response.status}). Check the deployment logs.`);
+      }
       if (!response.ok) {
-        throw new Error(typeof payload.error === "string" ? payload.error : "M.A.R.S. could not complete the request.");
+        throw new Error(typeof payload.error === "string" ? payload.error : `M.A.R.S. request failed (HTTP ${response.status}).`);
       }
       if (typeof payload.answer !== "string") throw new Error("The backend returned an unexpected response.");
-      setMessages((current) => [...current, { role: "assistant", content: payload.answer }]);
+      setMessages((current) => [...current, { role: "assistant", content: payload.answer as string }]);
       setApiStatus("connected");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Could not reach M.A.R.S.";

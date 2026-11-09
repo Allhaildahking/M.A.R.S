@@ -7,7 +7,13 @@ Provenance marker: MARS-DG-2026
 
 from __future__ import annotations
 
+import logging
+import os
+import re
 import secrets
+import time
+import traceback
+import uuid
 from typing import Literal
 
 from fastapi import Depends, FastAPI, Header, HTTPException, status
@@ -17,6 +23,8 @@ from .config import settings
 from .core import Mars
 from .providers import GeminiProvider
 from .tools import ToolPermission, ToolRegistry, register_web_research_tools
+
+logger = logging.getLogger("mars.api")
 
 
 class ChatRequest(BaseModel):
@@ -53,6 +61,28 @@ def _build_mars() -> Mars:
     return Mars(provider=GeminiProvider(), tools=registry)
 
 
+def _redact_sensitive_values(value: str) -> str:
+    """Remove configured secrets and common credential formats from diagnostic text."""
+    redacted = value
+    for name, secret in os.environ.items():
+        if secret and len(secret) >= 6 and any(
+            marker in name.upper() for marker in ("KEY", "TOKEN", "SECRET", "PASSWORD")
+        ):
+            redacted = redacted.replace(secret, "[REDACTED]")
+    redacted = re.sub(r"AIza[0-9A-Za-z_-]{20,}", "[REDACTED_GEMINI_KEY]", redacted)
+    redacted = re.sub(
+        r"(?i)(authorization\s*[:=]\s*bearer\s+)[^\s'\"]+",
+        r"\1[REDACTED]",
+        redacted,
+    )
+    redacted = re.sub(
+        r"(?i)([?&](?:key|token|secret|password)=)[^&\s]+",
+        r"\1[REDACTED]",
+        redacted,
+    )
+    return redacted
+
+
 def create_app(*, mars: Mars | None = None, api_token: str | None = None) -> FastAPI:
     """Create the API app. Inject a Mars instance and token for tests."""
     app = FastAPI(title="M.A.R.S. API", version="0.1.0", docs_url=None, redoc_url=None)
@@ -79,9 +109,18 @@ def create_app(*, mars: Mars | None = None, api_token: str | None = None) -> Fas
 
     @app.post("/v1/chat", response_model=ChatResponse)
     def chat(payload: ChatRequest, _: None = Depends(authorize)) -> ChatResponse:
+        started_at = time.perf_counter()
+        request_id = uuid.uuid4().hex[:12]
         engine = mars
-        if engine is None:
-            engine = _build_mars()
+        provider_name = type(engine.provider).__name__ if engine is not None else "uninitialized"
+
+        logger.info(
+            "MARS chat started | request_id=%s | mode=%s | provider=%s",
+            request_id,
+            payload.mode,
+            provider_name,
+        )
+
         mode_instruction = (
             "You are in Standard Mode. Keep the experience approachable. Give the useful answer "
             "first, explain technical details only when they help, and do not expose internal "
@@ -92,7 +131,12 @@ def create_app(*, mars: Mars | None = None, api_token: str | None = None) -> Fas
             "trade-offs when useful. Be explicit about what was verified versus inferred. Do not "
             "claim to expose live tool traces or logs unless they are actually provided."
         )
+
         try:
+            if engine is None:
+                engine = _build_mars()
+                provider_name = type(engine.provider).__name__
+
             answer = engine.respond(
                 payload.message,
                 conversation_id=payload.conversation_id,
@@ -102,10 +146,40 @@ def create_app(*, mars: Mars | None = None, api_token: str | None = None) -> Fas
         except HTTPException:
             raise
         except Exception as exc:
+            elapsed_ms = (time.perf_counter() - started_at) * 1000
+            diagnostic = "".join(
+                traceback.format_exception(type(exc), exc, exc.__traceback__)
+            )
+            diagnostic = _redact_sensitive_values(diagnostic).replace(
+                payload.message, "[REDACTED_USER_MESSAGE]"
+            )
+            logger.error(
+                "MARS chat failed | request_id=%s | mode=%s | provider=%s | "
+                "elapsed_ms=%.1f | exception_type=%s | exception=%s",
+                request_id,
+                payload.mode,
+                provider_name,
+                elapsed_ms,
+                type(exc).__name__,
+                _redact_sensitive_values(str(exc)).replace(
+                    payload.message, "[REDACTED_USER_MESSAGE]"
+                ),
+            )
+            logger.error("MARS traceback | request_id=%s\n%s", request_id, diagnostic)
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
-                detail="MARS could not complete the request. Check server logs.",
+                detail="MARS could not complete the request. Check backend logs using request_id "
+                f"{request_id}.",
             ) from exc
+
+        elapsed_ms = (time.perf_counter() - started_at) * 1000
+        logger.info(
+            "MARS chat completed | request_id=%s | mode=%s | provider=%s | elapsed_ms=%.1f",
+            request_id,
+            payload.mode,
+            provider_name,
+            elapsed_ms,
+        )
         return ChatResponse(answer=answer, conversation_id=payload.conversation_id)
 
     return app
