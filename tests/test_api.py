@@ -55,7 +55,9 @@ def test_chat_rejects_blank_message() -> None:
 def test_chat_logs_redacted_diagnostics_on_provider_failure(caplog) -> None:
     class BrokenProvider:
         def generate(self, messages):
-            raise RuntimeError(\n                "private user message; provider key=AIza123456789012345678901234"\n            )
+            raise RuntimeError(
+                "private user message; provider key=AIza123456789012345678901234"
+            )
 
     client = TestClient(
         create_app(
