@@ -55,7 +55,7 @@ def test_chat_rejects_blank_message() -> None:
 def test_chat_logs_redacted_diagnostics_on_provider_failure(caplog) -> None:
     class BrokenProvider:
         def generate(self, messages):
-            raise RuntimeError("provider request failed with key=AIza123456789012345678901234")
+            raise RuntimeError(\n                "private user message; provider key=AIza123456789012345678901234"\n            )
 
     client = TestClient(
         create_app(
@@ -76,4 +76,5 @@ def test_chat_logs_redacted_diagnostics_on_provider_failure(caplog) -> None:
     assert "RuntimeError" in caplog.text
     assert "[REDACTED_GEMINI_KEY]" in caplog.text
     assert "AIza123456789012345678901234" not in caplog.text
+    assert "[REDACTED_USER_MESSAGE]" in caplog.text
     assert "private user message" not in caplog.text
