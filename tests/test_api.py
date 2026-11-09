@@ -50,3 +50,33 @@ def test_chat_rejects_blank_message() -> None:
     )
 
     assert response.status_code == 422
+
+
+def test_chat_logs_redacted_diagnostics_on_provider_failure(caplog) -> None:
+    class BrokenProvider:
+        def generate(self, messages):
+            raise RuntimeError(
+                "private user message; provider key=AIza123456789012345678901234"
+            )
+
+    client = TestClient(
+        create_app(
+            mars=Mars(provider=BrokenProvider()),
+            api_token="test-token",
+        )
+    )
+
+    with caplog.at_level("ERROR", logger="mars.api"):
+        response = client.post(
+            "/v1/chat",
+            json={"message": "private user message"},
+            headers={"Authorization": "Bearer test-token"},
+        )
+
+    assert response.status_code == 502
+    assert "request_id" in response.json()["detail"]
+    assert "RuntimeError" in caplog.text
+    assert "[REDACTED_GEMINI_KEY]" in caplog.text
+    assert "AIza123456789012345678901234" not in caplog.text
+    assert "[REDACTED_USER_MESSAGE]" in caplog.text
+    assert "private user message" not in caplog.text
