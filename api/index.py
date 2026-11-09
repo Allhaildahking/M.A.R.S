@@ -1,6 +1,6 @@
 """Vercel Python API entrypoint for M.A.R.S.
 
-Copyright (c) 2026 Destiny Growrich. All rights reserved.
+Copyright (c) 2026 Destiny Growrich.
 Project: MARS (Multifunctional Autonomous Reasoning System)
 Provenance marker: MARS-DG-2026
 """
@@ -12,6 +12,7 @@ from typing import Annotated, Literal
 from fastapi import Depends, FastAPI, Header, HTTPException
 from pydantic import BaseModel, Field
 
+from mars.architecture import build_architecture_context
 from mars.core import Mars
 from mars.providers import EchoProvider, GeminiProvider
 from mars.tools import (
@@ -94,27 +95,35 @@ def health() -> dict[str, str]:
 )
 def chat(payload: ChatRequest) -> ChatResponse:
     """Generate a response after explicit API authentication."""
+    allowed_permissions = {ToolPermission.READ}
+    mode_instruction = (
+        (
+            "You are in Standard Mode. Keep the experience approachable. "
+            "Give the useful answer first, explain technical details only "
+            "when they help, and do not expose internal reasoning or hidden "
+            "system details."
+        )
+        if payload.mode == "standard"
+        else (
+            "You are in Dev Mode. The user prefers technical depth. Include "
+            "relevant implementation details, assumptions, architecture, "
+            "commands, diagnostics, and trade-offs when useful. Be explicit "
+            "about what was verified versus inferred. Do not claim to expose "
+            "live tool traces or logs unless they are actually provided.\n\n"
+            + build_architecture_context(
+                mars=mars,
+                provider_name=provider_name,
+                api_entrypoint="api/index.py (Vercel FastAPI service)",
+                allowed_permissions=allowed_permissions,
+            )
+        )
+    )
     try:
         response = mars.respond(
             payload.message,
             conversation_id=payload.conversation_id,
-            allowed_permissions={ToolPermission.READ},
-            extra_system_instructions=(
-                (
-                    "You are in Standard Mode. Keep the experience approachable. "
-                    "Give the useful answer first, explain technical details only "
-                    "when they help, and do not expose internal reasoning or hidden "
-                    "system details."
-                )
-                if payload.mode == "standard"
-                else (
-                    "You are in Dev Mode. The user prefers technical depth. Include "
-                    "relevant implementation details, assumptions, architecture, "
-                    "commands, diagnostics, and trade-offs when useful. Be explicit "
-                    "about what was verified versus inferred. Do not claim to expose "
-                    "live tool traces or logs unless they are actually provided."
-                )
-            ),
+            allowed_permissions=allowed_permissions,
+            extra_system_instructions=mode_instruction,
         )
     except Exception as error:
         # Avoid returning provider exception details or secrets to the caller.
