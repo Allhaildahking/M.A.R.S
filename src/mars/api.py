@@ -150,7 +150,9 @@ def create_app(*, mars: Mars | None = None, api_token: str | None = None) -> Fas
             diagnostic = "".join(
                 traceback.format_exception(type(exc), exc, exc.__traceback__)
             )
-            diagnostic = _redact_sensitive_values(diagnostic)
+            diagnostic = _redact_sensitive_values(diagnostic).replace(
+                payload.message, "[REDACTED_USER_MESSAGE]"
+            )
             logger.error(
                 "MARS chat failed | request_id=%s | mode=%s | provider=%s | "
                 "elapsed_ms=%.1f | exception_type=%s | exception=%s",
@@ -159,7 +161,9 @@ def create_app(*, mars: Mars | None = None, api_token: str | None = None) -> Fas
                 provider_name,
                 elapsed_ms,
                 type(exc).__name__,
-                _redact_sensitive_values(str(exc)),
+                _redact_sensitive_values(str(exc)).replace(
+                    payload.message, "[REDACTED_USER_MESSAGE]"
+                ),
             )
             logger.error("MARS traceback | request_id=%s\n%s", request_id, diagnostic)
             raise HTTPException(
