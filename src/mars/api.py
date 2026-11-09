@@ -13,6 +13,7 @@ from typing import Literal
 from fastapi import Depends, FastAPI, Header, HTTPException, status
 from pydantic import BaseModel, Field, field_validator
 
+from .architecture import build_architecture_context
 from .config import settings
 from .core import Mars
 from .providers import GeminiProvider
@@ -82,21 +83,30 @@ def create_app(*, mars: Mars | None = None, api_token: str | None = None) -> Fas
         engine = mars
         if engine is None:
             engine = _build_mars()
+        allowed_permissions = {ToolPermission.READ}
         mode_instruction = (
             "You are in Standard Mode. Keep the experience approachable. Give the useful answer "
             "first, explain technical details only when they help, and do not expose internal "
             "reasoning or hidden system details."
             if payload.mode == "standard"
-            else "You are in Dev Mode. The user prefers technical depth. Include relevant "
-            "implementation details, assumptions, architecture, commands, diagnostics, and "
-            "trade-offs when useful. Be explicit about what was verified versus inferred. Do not "
-            "claim to expose live tool traces or logs unless they are actually provided."
+            else (
+                "You are in Dev Mode. The user prefers technical depth. Include relevant "
+                "implementation details, assumptions, architecture, commands, diagnostics, and "
+                "trade-offs when useful. Be explicit about what was verified versus inferred. "
+                "Do not claim to expose live tool traces or logs unless they are actually provided.\n\n"
+                + build_architecture_context(
+                    mars=engine,
+                    provider_name=type(engine.provider).__name__,
+                    api_entrypoint="src/mars/api.py (local FastAPI service)",
+                    allowed_permissions=allowed_permissions,
+                )
+            )
         )
         try:
             answer = engine.respond(
                 payload.message,
                 conversation_id=payload.conversation_id,
-                allowed_permissions={ToolPermission.READ},
+                allowed_permissions=allowed_permissions,
                 extra_system_instructions=mode_instruction,
             )
         except HTTPException:
