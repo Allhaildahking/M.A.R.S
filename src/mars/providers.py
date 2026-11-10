@@ -6,6 +6,7 @@ Provenance marker: MARS-DG-2026
 """
 
 import json
+import logging
 from typing import Any
 
 from google import genai
@@ -15,6 +16,10 @@ from pydantic import BaseModel, Field
 from .config import settings
 from .core import Message
 from .tools import ModelTurn, ToolCall
+
+
+logger = logging.getLogger(__name__)
+TRANSIENT_PROVIDER_STATUS_CODES = {429, 500, 502, 503, 504}
 
 
 class AgentResponse(BaseModel):
@@ -41,15 +46,21 @@ class EchoProvider:
 
 
 class GeminiProvider:
-    """Gemini-backed model provider."""
+    """Gemini-backed model provider with transient-outage fallback."""
 
     def __init__(
         self,
         api_key: str | None = None,
         model: str | None = None,
         client: genai.Client | None = None,
+        fallback_model: str | None = None,
     ) -> None:
         self.model = model or settings.gemini_model
+        self.fallback_model = (
+            fallback_model
+            if fallback_model is not None
+            else settings.gemini_fallback_model
+        )
         self.client = client or genai.Client(api_key=api_key or settings.gemini_api_key)
 
     @staticmethod
@@ -69,10 +80,38 @@ class GeminiProvider:
             if message.role != "system"
         ]
 
+    def _generate_content(self, *, config: types.GenerateContentConfig, messages: list[Message]):
+        contents = self._contents(messages)
+        try:
+            return self.client.models.generate_content(
+                model=self.model,
+                contents=contents,
+                config=config,
+            )
+        except Exception as exc:
+            status_code = getattr(exc, "code", None) or getattr(exc, "status_code", None)
+            if (
+                status_code not in TRANSIENT_PROVIDER_STATUS_CODES
+                or not self.fallback_model
+                or self.fallback_model == self.model
+            ):
+                raise
+
+            logger.warning(
+                "Gemini primary model %s returned HTTP %s; retrying once with fallback model %s.",
+                self.model,
+                status_code,
+                self.fallback_model,
+            )
+            return self.client.models.generate_content(
+                model=self.fallback_model,
+                contents=contents,
+                config=config,
+            )
+
     def generate(self, messages: list[Message]) -> str:
-        response = self.client.models.generate_content(
-            model=self.model,
-            contents=self._contents(messages),
+        response = self._generate_content(
+            messages=messages,
             config=types.GenerateContentConfig(
                 system_instruction=self._system_instruction(messages),
             ),
@@ -106,9 +145,8 @@ class GeminiProvider:
             )
             if instruction
         )
-        response = self.client.models.generate_content(
-            model=self.model,
-            contents=self._contents(messages),
+        response = self._generate_content(
+            messages=messages,
             config=types.GenerateContentConfig(
                 system_instruction=system_instruction,
                 response_mime_type="application/json",
