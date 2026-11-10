@@ -79,10 +79,12 @@ class GeminiProvider:
                     types.Content(
                         role="tool",
                         parts=[
-                            types.Part.from_function_response(
-                                name=message.tool_name,
-                                response=response,
-                                id=message.tool_call_id,
+                            types.Part(
+                                function_response=types.FunctionResponse(
+                                    name=message.tool_name,
+                                    response=response,
+                                    id=message.tool_call_id,
+                                )
                             )
                         ],
                     )
