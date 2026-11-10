@@ -42,6 +42,7 @@ class ModelTurn:
 
     text: str = ""
     tool_calls: tuple[ToolCall, ...] = ()
+    provider_content: object | None = None
 
 
 @dataclass(frozen=True)
