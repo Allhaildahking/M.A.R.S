@@ -96,6 +96,18 @@ class GeminiProvider:
         return contents
 
     @staticmethod
+    def _gemini_schema(value: object) -> object:
+        if isinstance(value, dict):
+            return {
+                key: GeminiProvider._gemini_schema(item)
+                for key, item in value.items()
+                if key != "additionalProperties"
+            }
+        if isinstance(value, list):
+            return [GeminiProvider._gemini_schema(item) for item in value]
+        return value
+
+    @staticmethod
     def _tool_declarations(
         tool_specs: list[dict[str, object]],
     ) -> list[types.Tool]:
@@ -103,7 +115,9 @@ class GeminiProvider:
             types.FunctionDeclaration(
                 name=str(spec["name"]),
                 description=str(spec.get("description", "")),
-                parameters_json_schema=spec.get("input_schema") or {"type": "object"},
+                parameters_json_schema=GeminiProvider._gemini_schema(
+                    spec.get("input_schema") or {"type": "object"}
+                ),
             )
             for spec in tool_specs
         ]
