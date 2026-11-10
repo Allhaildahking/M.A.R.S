@@ -7,6 +7,7 @@ Provenance marker: MARS-DG-2026
 
 from __future__ import annotations
 
+import logging
 import secrets
 from typing import Literal
 
@@ -17,6 +18,9 @@ from .config import settings
 from .core import Mars
 from .providers import GeminiProvider
 from .tools import ToolPermission, ToolRegistry, register_web_research_tools
+
+
+logger = logging.getLogger(__name__)
 
 
 class ChatRequest(BaseModel):
@@ -102,6 +106,7 @@ def create_app(*, mars: Mars | None = None, api_token: str | None = None) -> Fas
         except HTTPException:
             raise
         except Exception as exc:
+            logger.exception("MARS chat request failed (mode=%s)", payload.mode)
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
                 detail="MARS could not complete the request. Check server logs.",
