@@ -13,7 +13,7 @@ dependencies = [
   "ddgs>=9.0",
   "google-genai>=1.38.0",
   "pydantic>=2.10",
-  "fastapi>=0.115",
+  "fastapi>=0.162.1",
   "uvicorn[standard]>=0.30",
 ]
 
