@@ -25,6 +25,7 @@ class Message:
     content: str
     provider_content: object | None = None
     tool_name: str | None = None
+    tool_call_id: str | None = None
     tool_response: dict[str, object] | None = None
 
 
@@ -148,6 +149,7 @@ class Mars:
                         role="tool",
                         content=self._format_tool_result(call, result),
                         tool_name=call.name,
+                        tool_call_id=call.call_id,
                         tool_response=(
                             {"output": result.output}
                             if result.success
@@ -173,7 +175,10 @@ class Mars:
 
     @staticmethod
     def _format_tool_calls(tool_calls: tuple[ToolCall, ...]) -> str:
-        calls = [{"name": call.name, "arguments": call.arguments} for call in tool_calls]
+        calls = [
+            {"name": call.name, "arguments": call.arguments, "id": call.call_id}
+            for call in tool_calls
+        ]
         return json.dumps({"text": "", "tool_calls": calls}, ensure_ascii=False)
 
     @staticmethod
