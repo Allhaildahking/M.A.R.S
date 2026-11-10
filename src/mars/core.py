@@ -23,6 +23,9 @@ logger = logging.getLogger(__name__)
 class Message:
     role: str
     content: str
+    provider_content: object | None = None
+    tool_name: str | None = None
+    tool_response: dict[str, object] | None = None
 
 
 class ModelProvider(Protocol):
@@ -131,6 +134,7 @@ class Mars:
                 Message(
                     role="assistant",
                     content=self._format_tool_calls(turn.tool_calls),
+                    provider_content=turn.provider_content,
                 )
             )
             for call in turn.tool_calls:
@@ -143,6 +147,12 @@ class Mars:
                     Message(
                         role="tool",
                         content=self._format_tool_result(call, result),
+                        tool_name=call.name,
+                        tool_response=(
+                            {"output": result.output}
+                            if result.success
+                            else {"error": result.error or "Tool execution failed."}
+                        ),
                     )
                 )
         if conversation is not None:
