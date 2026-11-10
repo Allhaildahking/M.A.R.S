@@ -6,6 +6,8 @@ Provenance marker: MARS-DG-2026
 """
 
 import json
+import logging
+import time
 from dataclasses import dataclass
 from typing import Protocol
 
@@ -13,6 +15,9 @@ from .conversation import ConversationStore
 from .instructions import MARS_SYSTEM_INSTRUCTIONS
 from .memory import MemoryManager
 from .tools import ModelTurn, ToolCall, ToolPermission, ToolRegistry, ToolResult
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -176,4 +181,22 @@ class Mars:
         allowed_permissions: set[ToolPermission] | None = None,
     ) -> ToolResult:
         """Execute a registered tool through the permission boundary."""
-        return self.tools.execute(name, arguments, allowed_permissions=allowed_permissions)
+        started_at = time.perf_counter()
+        logger.info("Tool execution started (tool=%s)", name)
+        result = self.tools.execute(
+            name, arguments, allowed_permissions=allowed_permissions
+        )
+        duration_ms = (time.perf_counter() - started_at) * 1000
+        if result.success:
+            logger.info(
+                "Tool execution succeeded (tool=%s, duration_ms=%.1f)",
+                name,
+                duration_ms,
+            )
+        else:
+            logger.warning(
+                "Tool execution failed (tool=%s, duration_ms=%.1f)",
+                name,
+                duration_ms,
+            )
+        return result
