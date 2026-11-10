@@ -175,10 +175,12 @@ class Mars:
 
     @staticmethod
     def _format_tool_calls(tool_calls: tuple[ToolCall, ...]) -> str:
-        calls = [
-            {"name": call.name, "arguments": call.arguments, "id": call.call_id}
-            for call in tool_calls
-        ]
+        calls = []
+        for call in tool_calls:
+            item = {"name": call.name, "arguments": call.arguments}
+            if call.call_id is not None:
+                item["id"] = call.call_id
+            calls.append(item)
         return json.dumps({"text": "", "tool_calls": calls}, ensure_ascii=False)
 
     @staticmethod
