@@ -8,6 +8,7 @@ Provenance marker: MARS-DG-2026
 from __future__ import annotations
 
 import ipaddress
+import logging
 import socket
 import urllib.error
 import urllib.parse
@@ -17,6 +18,8 @@ from html.parser import HTMLParser
 from typing import Any
 
 from .models import ToolPermission, ToolResult, ToolSpec
+
+logger = logging.getLogger(__name__)
 
 
 class _ReadableHTML(HTMLParser):
@@ -217,6 +220,16 @@ class WebSearchTool:
                 },
             )
         except Exception as error:
+            # Log only stable exception metadata. Exception messages and tracebacks can
+            # contain user queries, URLs, or provider response content.
+            errno = getattr(error, "errno", None)
+            status_code = getattr(error, "status_code", None)
+            logger.warning(
+                "Web search provider failed (exception_type=%s, errno=%s, status_code=%s)",
+                type(error).__name__,
+                errno if isinstance(errno, int) else None,
+                status_code if isinstance(status_code, int) else None,
+            )
             return ToolResult(success=False, error=f"Web search failed: {error}")
 
 

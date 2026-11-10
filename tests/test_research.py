@@ -38,14 +38,19 @@ def test_search_rejects_invalid_query_and_result_count() -> None:
     assert not tool.execute({"query": "ok", "max_results": 99}).success
 
 
-def test_search_errors_are_returned_safely() -> None:
-    def fail(query: str, limit: int) -> list[dict[str, str]]:
-        raise TimeoutError("provider timed out")
+def test_search_errors_are_logged_without_query_or_exception_message(caplog) -> None:
+    private_query = "private-query-do-not-log"
 
-    result = WebSearchTool(searcher=fail).execute({"query": "latest science"})
+    def fail(query: str, limit: int) -> list[dict[str, str]]:
+        raise TimeoutError(f"provider timed out for {query}")
+
+    result = WebSearchTool(searcher=fail).execute({"query": private_query})
 
     assert not result.success
     assert "Web search failed" in (result.error or "")
+    assert "TimeoutError" in caplog.text
+    assert private_query not in caplog.text
+    assert "provider timed out" not in caplog.text
 
 
 def test_fetch_tool_returns_page_content() -> None:

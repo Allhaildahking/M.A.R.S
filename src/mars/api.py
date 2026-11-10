@@ -19,7 +19,6 @@ from .core import Mars
 from .providers import GeminiProvider
 from .tools import ToolPermission, ToolRegistry, register_web_research_tools
 
-
 logger = logging.getLogger(__name__)
 
 
