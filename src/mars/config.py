@@ -20,6 +20,10 @@ class Settings:
     gemini_api_key: str | None = os.getenv("GEMINI_API_KEY")
     api_token: str | None = os.getenv("MARS_API_TOKEN")
     gemini_model: str = os.getenv("MARS_GEMINI_MODEL", "gemini-3.8-flash")
+    gemini_fallback_model: str | None = os.getenv(
+        "MARS_GEMINI_FALLBACK_MODEL",
+        "gemini-3.5-flash-lite",
+    )
 
 
 settings = Settings()
