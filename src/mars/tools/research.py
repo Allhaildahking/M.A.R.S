@@ -19,7 +19,6 @@ from typing import Any
 
 from .models import ToolPermission, ToolResult, ToolSpec
 
-
 logger = logging.getLogger(__name__)
 
 
