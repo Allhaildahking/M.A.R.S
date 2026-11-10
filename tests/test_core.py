@@ -72,6 +72,23 @@ def test_mars_can_execute_a_registered_tool() -> None:
     assert result == ToolResult(success=True, output="hello")
 
 
+def test_tool_execution_logs_status_without_logging_arguments(caplog) -> None:
+    mars = Mars(EchoProvider())
+    mars.tools.register(EchoTool())
+    caplog.set_level("INFO", logger="mars.core")
+
+    result = mars.execute_tool(
+        "echo",
+        {"text": "private-tool-argument"},
+        allowed_permissions={ToolPermission.READ},
+    )
+
+    assert result.success is True
+    assert "Tool execution started (tool=echo)" in caplog.text
+    assert "Tool execution succeeded (tool=echo, duration_ms=" in caplog.text
+    assert "private-tool-argument" not in caplog.text
+
+
 def test_mars_cannot_bypass_tool_permissions() -> None:
     mars = Mars(EchoProvider())
     mars.tools.register(EchoTool())
@@ -136,6 +153,7 @@ def test_mars_stops_runaway_tool_loops() -> None:
     )
 
     assert "safety limit" in result
+
 
 def test_mars_keeps_short_term_conversation_state() -> None:
     provider = AgentProvider(
