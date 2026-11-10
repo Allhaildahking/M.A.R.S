@@ -72,3 +72,65 @@ def test_gemini_structured_turn_keeps_system_instruction_out_of_chat() -> None:
     )
     assert call["config"].response_mime_type == "application/json"
     assert not hasattr(call["config"], "response_schema") or call["config"].response_schema is None
+
+
+
+class SequenceModels:
+    def __init__(self, outcomes: list[object]) -> None:
+        self.outcomes = outcomes
+        self.calls: list[dict[str, object]] = []
+
+    def generate_content(self, **kwargs: object) -> SimpleNamespace:
+        self.calls.append(kwargs)
+        outcome = self.outcomes.pop(0)
+        if isinstance(outcome, Exception):
+            raise outcome
+        return SimpleNamespace(text=str(outcome))
+
+
+class SequenceClient:
+    def __init__(self, outcomes: list[object]) -> None:
+        self.models = SequenceModels(outcomes)
+
+
+def test_gemini_provider_falls_back_after_temporary_service_unavailable() -> None:
+    class TemporaryProviderError(Exception):
+        code = 503
+
+    client = SequenceClient(
+        [TemporaryProviderError("primary model overloaded"), "Fallback answer"]
+    )
+    provider = GeminiProvider(
+        model="primary-model",
+        fallback_model="fallback-model",
+        client=client,  # type: ignore[arg-type]
+    )
+
+    answer = provider.generate([Message(role="user", content="Hello.")])
+
+    assert answer == "Fallback answer"
+    assert [call["model"] for call in client.models.calls] == [
+        "primary-model",
+        "fallback-model",
+    ]
+
+
+def test_gemini_provider_does_not_fallback_for_non_transient_errors() -> None:
+    class InvalidKeyError(Exception):
+        code = 401
+
+    client = SequenceClient([InvalidKeyError("invalid API key")])
+    provider = GeminiProvider(
+        model="primary-model",
+        fallback_model="fallback-model",
+        client=client,  # type: ignore[arg-type]
+    )
+
+    try:
+        provider.generate([Message(role="user", content="Hello.")])
+    except InvalidKeyError:
+        pass
+    else:
+        raise AssertionError("Authentication errors must not trigger model fallback.")
+
+    assert [call["model"] for call in client.models.calls] == ["primary-model"]
