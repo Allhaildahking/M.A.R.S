@@ -204,3 +204,22 @@ def test_gemini_provider_does_not_fallback_for_non_transient_errors() -> None:
         raise AssertionError("Authentication errors must not trigger model fallback.")
 
     assert [call["model"] for call in client.models.calls] == ["primary-model"]
+
+
+def test_gemini_schema_removes_unsupported_additional_properties() -> None:
+    schema = GeminiProvider._gemini_schema(
+        {
+            "type": "object",
+            "additionalProperties": False,
+            "properties": {
+                "nested": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "properties": {"value": {"type": "string"}},
+                }
+            },
+        }
+    )
+
+    assert "additionalProperties" not in schema
+    assert "additionalProperties" not in schema["properties"]["nested"]
