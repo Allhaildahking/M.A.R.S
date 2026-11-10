@@ -16,7 +16,6 @@ from .instructions import MARS_SYSTEM_INSTRUCTIONS
 from .memory import MemoryManager
 from .tools import ModelTurn, ToolCall, ToolPermission, ToolRegistry, ToolResult
 
-
 logger = logging.getLogger(__name__)
 
 
