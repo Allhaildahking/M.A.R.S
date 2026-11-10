@@ -17,7 +17,6 @@ from .config import settings
 from .core import Message
 from .tools import ModelTurn, ToolCall
 
-
 logger = logging.getLogger(__name__)
 TRANSIENT_PROVIDER_STATUS_CODES = {429, 500, 502, 503, 504}
 
