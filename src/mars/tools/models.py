@@ -34,6 +34,7 @@ class ToolCall:
 
     name: str
     arguments: dict[str, Any]
+    call_id: str | None = None
 
 
 @dataclass(frozen=True)

@@ -41,10 +41,12 @@ def test_gemini_provider_sends_system_messages_as_system_instruction() -> None:
 
 
 def test_gemini_uses_native_function_declarations_and_parses_calls() -> None:
-    function_part = types.Part.from_function_call(
+    function_call = types.FunctionCall(
         name="web_search",
         args={"query": "recent AI developments", "max_results": 3},
+        id="call-123",
     )
+    function_part = types.Part(function_call=function_call)
     model_content = types.Content(role="model", parts=[function_part])
     response = SimpleNamespace(
         text=None,
@@ -78,6 +80,7 @@ def test_gemini_uses_native_function_declarations_and_parses_calls() -> None:
         ToolCall(
             name="web_search",
             arguments={"query": "recent AI developments", "max_results": 3},
+            call_id="call-123",
         ),
     )
     assert turn.provider_content is model_content
@@ -134,6 +137,7 @@ def test_tool_result_is_returned_as_native_function_response() -> None:
                 role="tool",
                 content="Search returned three sources.",
                 tool_name="web_search",
+                tool_call_id="call-123",
                 tool_response={"output": {"result_count": 3}},
             )
         ]
@@ -142,6 +146,7 @@ def test_tool_result_is_returned_as_native_function_response() -> None:
     assert contents[0].role == "tool"
     function_response = contents[0].parts[0].function_response
     assert function_response.name == "web_search"
+    assert function_response.id == "call-123"
     assert function_response.response == {"output": {"result_count": 3}}
 
 

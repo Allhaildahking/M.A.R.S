@@ -79,9 +79,12 @@ class GeminiProvider:
                     types.Content(
                         role="tool",
                         parts=[
-                            types.Part.from_function_response(
-                                name=message.tool_name,
-                                response=response,
+                            types.Part(
+                                function_response=types.FunctionResponse(
+                                    name=message.tool_name,
+                                    response=response,
+                                    id=message.tool_call_id,
+                                )
                             )
                         ],
                     )
@@ -221,7 +224,11 @@ class GeminiProvider:
         provider_content = candidate.content if candidate is not None else None
         function_calls = response.function_calls or []
         calls = tuple(
-            ToolCall(name=str(call.name), arguments=dict(call.args or {}))
+            ToolCall(
+                name=str(call.name),
+                arguments=dict(call.args or {}),
+                call_id=getattr(call, "id", None),
+            )
             for call in function_calls
             if call.name
         )
