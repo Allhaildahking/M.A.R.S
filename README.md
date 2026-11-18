@@ -32,6 +32,8 @@ Core principles:
 
 ## Run locally
 
+Before making changes, read the [development guide](docs/DEVELOPMENT.md) for the project layout, safety boundaries, and recommended workflow.
+
 Development target: Python 3.12+.
 
 ```bash
